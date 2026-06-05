@@ -1,0 +1,215 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  SUPER_ADMIN
+  BIOFIX_ADMIN
+  INSPECTOR
+  LAB_STAFF
+  QC_USER
+  API_CLIENT
+}
+
+enum EntityType {
+  MINERAL_WATER
+  RESTAURANT
+  HOTEL
+  CAFE
+  INSTITUTION
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
+enum ParameterType {
+  CHEMISTRY
+  MICROBIOLOGY
+  PHYSICAL
+}
+
+model User {
+  id             String        @id @default(cuid())
+  email          String        @unique
+  passwordHash   String
+  name           String?
+  role           Role          @default(QC_USER)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  inspections    Inspection[]  @relation("InspectorRelation")
+  auditLogs      AuditLog[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model Organization {
+  id                String              @id @default(cuid())
+  name              String
+  slug              String              @unique
+  type              EntityType
+  erpReferenceId    String?             @unique
+  trustScore        Float?
+  users             User[]
+  batches           Batch[]
+  inspections       Inspection[]
+  qrCodes           QRCode[]
+  certificates      Certificate[]
+  trustScoreHistory TrustScoreHistory[]
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([slug])
+  @@index([type])
+}
+
+model Batch {
+  id                 String             @id @default(cuid())
+  batchNumber        String             @unique
+  organizationId     String
+  organization       Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  productionDate     DateTime
+  verificationStatus VerificationStatus @default(PENDING)
+  labReports         LaboratoryReport[]
+  certificates       Certificate[]
+  qrCodes            QRCode[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@index([batchNumber])
+  @@index([organizationId, verificationStatus])
+}
+
+model LaboratoryReport {
+  id             String                @id @default(cuid())
+  batchId        String
+  batch          Batch                 @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  testDate       DateTime
+  reportedBy     String
+  parameters     LaboratoryParameter[]
+  reportFileUrl  String?
+  isCompliant    Boolean               @default(false)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+}
+
+model LaboratoryParameter {
+  id                 String           @id @default(cuid())
+  reportId           String
+  report             LaboratoryReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  name               String
+  type               ParameterType
+  value              Float
+  unit               String
+  standardMin        Float?
+  standardMax        Float?
+  isCompliant        Boolean
+  createdAt          DateTime         @default(now())
+
+  @@index([name])
+  @@index([type])
+}
+
+model Inspection {
+  id               String       @id @default(cuid())
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  inspectorId      String
+  inspector        User         @relation("InspectorRelation", fields: [inspectorId], references: [id])
+  inspectionDate   DateTime
+  complianceStatus String
+  notes            String?
+  reportUrl        String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+}
+
+model Certificate {
+  id             String       @id @default(cuid())
+  certificateNo  String       @unique
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  batchId        String?
+  batch          Batch?       @relation(fields: [batchId], references: [id])
+  issueDate      DateTime     @default(now())
+  expiryDate     DateTime?
+  status         String       @default("ACTIVE")
+  pdfUrl         String?
+}
+
+model QRCode {
+  id             String             @id @default(cuid())
+  code           String             @unique
+  targetUrl      String?
+  status         String             @default("ACTIVE")
+  organizationId String?
+  organization   Organization?      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  batchId        String?
+  batch          Batch?             @relation(fields: [batchId], references: [id])
+  scans          VerificationScan[]
+  createdAt      DateTime           @default(now())
+
+  @@index([code])
+}
+
+model VerificationScan {
+  id        String   @id @default(cuid())
+  qrCodeId  String
+  qrCode    QRCode   @relation(fields: [qrCodeId], references: [id], onDelete: Cascade)
+  ipAddress String?
+  userAgent String?
+  location  String?
+  scannedAt DateTime @default(now())
+
+  @@index([qrCodeId, scannedAt(sort: Desc)])
+}
+
+model ERPSyncLog {
+  id             String   @id @default(cuid())
+  syncDate       DateTime @default(now())
+  status         String
+  recordsSynced  Int
+  errorDetails   String?
+}
+
+model TrustScoreHistory {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  score          Float
+  reason         String?
+  recordedAt     DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([recordedAt])
+}
+
+model ApiClient {
+  id         String   @id @default(cuid())
+  name       String
+  apiKeyHash String   @unique
+  rateLimit  Int      @default(1000)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  entity    String
+  entityId  String
+  details   String?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([action])
+}
