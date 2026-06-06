@@ -7,10 +7,10 @@ const connection = new Redis(process.env.REDIS_URL || "redis://localhost:6379", 
 });
 
 // Define distributed queues
-export const SearchSyncQueue = new Queue("search-sync", { connection });
-export const ErpSyncQueue = new Queue("erp-sync", { connection });
-export const PdfGenerationQueue = new Queue("pdf-generation", { connection });
-export const TrustScoreQueue = new Queue("trust-score", { connection });
+export const SearchSyncQueue = new Queue("search-sync", { connection: connection as any });
+export const ErpSyncQueue = new Queue("erp-sync", { connection: connection as any });
+export const PdfGenerationQueue = new Queue("pdf-generation", { connection: connection as any });
+export const TrustScoreQueue = new Queue("trust-score", { connection: connection as any });
 
 /**
  * Dispatcher helper for adding jobs with robust retry policies

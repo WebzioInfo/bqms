@@ -16,7 +16,7 @@ export const searchWorker = new Worker(
     // Underneath, this now uses Meilisearch with true async durability
     await SearchService.syncOrganization(job.data.organizationId);
   },
-  { connection, concurrency: 10 } // Scale concurrency based on CPU
+  { connection: connection as any, concurrency: 10 } // Scale concurrency based on CPU
 );
 
 searchWorker.on("failed", (job, err) => {
@@ -34,7 +34,7 @@ export const pdfWorker = new Worker(
       await PdfService.generateInspectionReportPdf(job.data.entityId);
     }
   },
-  { connection, concurrency: 5 } // PDF generation is CPU heavy, lower concurrency
+  { connection: connection as any, concurrency: 5 } // PDF generation is CPU heavy, lower concurrency
 );
 
 logger.info("BullMQ Workers Initialized.");
