@@ -1,9 +1,10 @@
+import prisma from "@/lib/prisma";
 import { PrismaClient } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-const prisma = new PrismaClient();
+
 
 export async function generateMetadata({ params }: { params: { batchNumber: string } }) {
   return {

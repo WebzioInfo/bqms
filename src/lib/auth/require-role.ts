@@ -1,3 +1,4 @@
+import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { Role } from "@prisma/client";
 
@@ -47,7 +48,7 @@ export async function requireRole(allowedRoles: Role[], organizationId?: string)
     // fetch the user to be safe and secure.
     
     const { PrismaClient } = await import("@prisma/client");
-    const prisma = new PrismaClient();
+    
     const user = await prisma.user.findUnique({
       where: { id: (session as any).user.id }
     });

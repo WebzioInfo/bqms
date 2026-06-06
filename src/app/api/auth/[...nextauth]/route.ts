@@ -1,10 +1,11 @@
+import prisma from "@/lib/prisma";
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
-const prisma = new PrismaClient();
+
 
 export const authOptions: import("next-auth").NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -22,22 +23,52 @@ export const authOptions: import("next-auth").NextAuthOptions = {
           where: { email: credentials.email as string }
         });
 
-        // Verify password using bcrypt
-        const isPasswordValid = user ? await bcrypt.compare(credentials.password, user.passwordHash) : false;
-        
-        if (user && isPasswordValid) {
-          return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role
-          };
+        if (!user) return null;
+
+        // Check if account is locked
+        if (user.lockedUntil && user.lockedUntil > new Date()) {
+          throw new Error("Account is temporarily locked due to multiple failed login attempts. Please try again later.");
         }
-        return null;
+
+        // Verify password using bcrypt
+        const isPasswordValid = await bcrypt.compare(credentials.password, user.passwordHash);
+        
+        if (!isPasswordValid) {
+          // Increment failed attempts
+          const newFailedAttempts = user.failedLoginAttempts + 1;
+          const lockedUntil = newFailedAttempts >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null; // Lock for 15 minutes
+          
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { failedLoginAttempts: newFailedAttempts, lockedUntil }
+          });
+          
+          if (lockedUntil) {
+            throw new Error("Account locked due to too many failed attempts.");
+          }
+          throw new Error("Invalid email or password.");
+        }
+
+        // Success - reset attempts and update last login
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { failedLoginAttempts: 0, lockedUntil: null, lastLoginAt: new Date() }
+        });
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role
+        };
       }
     })
   ],
   session: { strategy: "jwt" },
+  pages: {
+    signIn: "/login",
+    error: "/login" // Error code passed in query string as ?error=
+  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {

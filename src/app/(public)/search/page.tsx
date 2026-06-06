@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { searchOrganizations } from "@/lib/meilisearch/client";
+import { searchOrganizations } from "@/app/actions/search";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";

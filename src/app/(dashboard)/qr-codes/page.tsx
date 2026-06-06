@@ -1,3 +1,4 @@
+import prisma from "@/lib/prisma";
 import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
@@ -6,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 
-const prisma = new PrismaClient();
+
 
 export default async function QRCodesPage() {
   const session = await getServerSession(authOptions);

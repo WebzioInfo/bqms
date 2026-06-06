@@ -1,6 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/prisma";
 
 export class CertificateService {
   static async generateCertificate(data: { organizationId: string; batchId?: string }) {

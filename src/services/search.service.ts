@@ -1,6 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/prisma";
 
 export class SearchService {
   /**
@@ -22,11 +20,8 @@ export class SearchService {
 
       if (!org) return;
 
-      // Mock Meilisearch Client
-      // const client = new MeiliSearch({ host: process.env.MEILISEARCH_HOST, apiKey: process.env.MEILISEARCH_KEY });
-      // await client.index("organizations").addDocuments([org]);
-      
-      console.log(`Successfully synced organization ${organizationId} to Meilisearch`);
+      // Meilisearch is no longer used for mock. Direct DB queries are performed via search action.
+      console.log(`Organization ${organizationId} is ready for direct search queries.`);
     } catch (error) {
       if (retryCount < MAX_RETRIES) {
         console.warn(`Meilisearch sync failed for org ${organizationId}. Retrying... (${retryCount + 1}/${MAX_RETRIES})`);

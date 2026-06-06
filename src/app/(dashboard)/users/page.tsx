@@ -1,4 +1,6 @@
+import prisma from "@/lib/prisma";
 import { PrismaClient } from "@prisma/client";
+import { Building2, UserCircle2, Mail, ShieldCheck } from "lucide-react";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -6,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 
-const prisma = new PrismaClient();
+
 
 export default async function UsersPage() {
   const session = await getServerSession(authOptions);
@@ -28,9 +30,11 @@ export default async function UsersPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Users</h1>
         {(userRole === "SUPER_ADMIN" || userRole === "BIOFIX_ADMIN") && (
-          <Link href="/users/new">
-            <Button>Add User</Button>
-          </Link>
+          <div className="ml-auto flex items-center gap-2">
+            <Link href="/users/new">
+              <Button>Add User</Button>
+            </Link>
+          </div>
         )}
       </div>
 
@@ -62,9 +66,11 @@ export default async function UsersPage() {
                   </TableCell>
                   <TableCell>{u.organization?.name || "System"}</TableCell>
                   <TableCell className="text-right">
-                    <Link href={`/users/${u.id}`}>
-                      <Button variant="ghost" size="sm">Edit</Button>
-                    </Link>
+                    <div className="flex justify-end gap-2">
+                      <Link href={`/users/${u.id}`}>
+                        <Button variant="ghost" size="sm">Edit</Button>
+                      </Link>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

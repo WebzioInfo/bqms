@@ -1,6 +1,7 @@
+import prisma from "@/lib/prisma";
 import { PrismaClient, EntityType } from "@prisma/client";
 
-const prisma = new PrismaClient();
+
 
 export class OrganizationService {
   static async createOrganization(data: { name: string; slug: string; type: EntityType }) {

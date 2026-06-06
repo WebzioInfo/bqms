@@ -1,10 +1,11 @@
 "use server";
+import prisma from "@/lib/prisma";
 
 import { PrismaClient } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/require-role";
 
-const prisma = new PrismaClient();
+
 
 export async function generateQRCode(data: {
   targetUrl: string;
@@ -48,6 +49,33 @@ export async function revokeQRCode(id: string) {
     });
     revalidatePath("/dashboard/qrcodes");
     return { success: true, qrCode: qr };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function generateQRCodes(organizationId: string, batchId: string | null, count: number) {
+  try {
+    await requireRole(["SUPER_ADMIN", "BIOFIX_ADMIN"]);
+    
+    const qrData = [];
+    for (let i = 0; i < count; i++) {
+      qrData.push({
+        code: `QR-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+        targetUrl: `https://bqms.app/verify`,
+        status: "ACTIVE",
+        organizationId: organizationId || null,
+        batchId: batchId || null,
+      });
+    }
+
+    // @ts-ignore Prisma bulk insert
+    await prisma.qRCode.createMany({
+      data: qrData,
+    });
+
+    revalidatePath("/qr-codes");
+    return { success: true, count };
   } catch (error: any) {
     return { success: false, error: error.message };
   }

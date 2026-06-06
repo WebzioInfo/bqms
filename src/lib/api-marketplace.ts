@@ -1,14 +1,15 @@
+import prisma from "@/lib/prisma";
 import { PrismaClient } from "@prisma/client";
 import Redis from "ioredis";
 
-const prisma = new PrismaClient();
+
 const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
 
+import crypto from "crypto";
+
 export async function createApiKey(name: string) {
-  // In production, use crypto.randomBytes to generate key and only store the hash
-  const rawKey = `bqms_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
-  // Mock hashing for demonstration
-  const apiKeyHash = Buffer.from(rawKey).toString('base64'); 
+  const rawKey = `bqms_${crypto.randomBytes(24).toString("hex")}`;
+  const apiKeyHash = crypto.createHash("sha256").update(rawKey).digest("hex");
 
   const client = await prisma.apiClient.create({
     data: {

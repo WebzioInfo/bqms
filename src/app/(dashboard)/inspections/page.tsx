@@ -1,12 +1,10 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DataTable, Column } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-
-const prisma = new PrismaClient();
 
 export default async function InspectionsPage() {
   const session = await getServerSession(authOptions);
@@ -27,61 +25,71 @@ export default async function InspectionsPage() {
     orderBy: { inspectionDate: "desc" }
   });
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Inspections</h1>
-        {["SUPER_ADMIN", "BIOFIX_ADMIN", "INSPECTOR"].includes(userRole) && (
-          <Link href="/inspections/new">
-            <Button>Schedule Inspection</Button>
+  const columns: Column<any>[] = [
+    {
+      key: "organization",
+      header: "Organization",
+      cell: (insp) => <span className="font-medium">{insp.organization.name}</span>
+    },
+    {
+      key: "inspector",
+      header: "Inspector",
+      cell: (insp) => <span>{insp.inspector.name || insp.inspector.email}</span>
+    },
+    {
+      key: "date",
+      header: "Date",
+      cell: (insp) => <span>{insp.inspectionDate.toLocaleDateString()}</span>
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (insp) => (
+        <Badge variant={
+          insp.complianceStatus === "PASS" ? "default" :
+          insp.complianceStatus === "FAIL" ? "destructive" :
+          "secondary"
+        }>
+          {insp.complianceStatus}
+        </Badge>
+      )
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      cell: (insp) => (
+        <div className="flex justify-end gap-2">
+          <Link href={`/inspections/${insp.id}`}>
+            <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/10">View Details</Button>
           </Link>
+        </div>
+      )
+    }
+  ];
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Inspections</h1>
+          <p className="text-muted-foreground mt-1 text-sm">Review and manage field inspection reports.</p>
+        </div>
+        {["SUPER_ADMIN", "BIOFIX_ADMIN", "INSPECTOR"].includes(userRole) && (
+          <div className="ml-auto flex items-center gap-2">
+            <Link href="/inspections/new">
+              <Button className="shadow-sm">Schedule Inspection</Button>
+            </Link>
+          </div>
         )}
       </div>
 
-      <div className="rounded-md border bg-white dark:bg-black">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Organization</TableHead>
-              <TableHead>Inspector</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {inspections.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
-                  No inspections found.
-                </TableCell>
-              </TableRow>
-            ) : (
-              inspections.map((insp) => (
-                <TableRow key={insp.id}>
-                  <TableCell className="font-medium">{insp.organization.name}</TableCell>
-                  <TableCell>{insp.inspector.name || insp.inspector.email}</TableCell>
-                  <TableCell>{insp.inspectionDate.toLocaleDateString()}</TableCell>
-                  <TableCell>
-                    <Badge variant={
-                      insp.complianceStatus === "PASS" ? "default" :
-                      insp.complianceStatus === "FAIL" ? "destructive" :
-                      "secondary"
-                    }>
-                      {insp.complianceStatus}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Link href={`/inspections/${insp.id}`}>
-                      <Button variant="ghost" size="sm">View Report</Button>
-                    </Link>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable 
+        columns={columns} 
+        data={inspections} 
+        searchKey="organization.name"
+        searchPlaceholder="Search inspections..."
+        emptyMessage="No inspections found."
+      />
     </div>
   );
 }

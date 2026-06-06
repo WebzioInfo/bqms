@@ -1,6 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/prisma";
 
 export async function calculateTrustScore(organizationId: string) {
   // Fetch organization with its latest 5 inspections and batches

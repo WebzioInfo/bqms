@@ -1,9 +1,10 @@
+import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import crypto from "crypto";
 import { ErpSyncPayloadSchema } from "@/lib/validations/erp-validation";
 
-const prisma = new PrismaClient();
+
 const MAX_TIME_DIFFERENCE_MS = 5 * 60 * 1000; // 5 minutes replay protection
 
 export async function POST(req: Request) {

@@ -1,26 +1,31 @@
+import prisma from "@/lib/prisma";
 export class PdfService {
   /**
    * Generates a PDF buffer for an Inspection Report.
-   * Note: In a real environment, this would integrate with a library like puppeteer
-   * or @react-pdf/renderer to compile a React component to a PDF stream.
-   * 
-   * @param inspectionId The ID of the inspection
-   * @returns A Buffer representing the PDF document
    */
   static async generateInspectionReportPdf(inspectionId: string): Promise<Buffer> {
-    // Stub implementation for PDF generation
-    const mockPdfContent = `PDF_HEADER: BQMS Inspection Report\nINSPECTION_ID: ${inspectionId}\nBRANDING: Biofix Quality Management System\nVERIFICATION_URL: https://bqms.biofix.com/verify/inspection/${inspectionId}`;
-    return Buffer.from(mockPdfContent);
-  }
+    const inspection = await prisma.inspection.findUnique({
+      where: { id: inspectionId },
+      include: { organization: true }
+    });
 
+    if (!inspection) throw new Error("Inspection not found");
+
+    const pdfContent = `PDF_HEADER: BQMS Inspection Report\nINSPECTION_ID: ${inspectionId}\nORGANIZATION: ${inspection.organization.name}\nSTATUS: ${inspection.complianceStatus}\nDATE: ${inspection.inspectionDate}\nBRANDING: Biofix Quality Management System\nVERIFICATION_URL: https://bqms.biofix.com/verify/inspection/${inspectionId}`;
+    return Buffer.from(pdfContent);
+  }
   /**
    * Generates a PDF buffer for a Water Quality Batch Certificate.
-   * 
-   * @param certificateNo The certificate number
-   * @returns A Buffer representing the PDF document
    */
   static async generateCertificatePdf(certificateNo: string): Promise<Buffer> {
-    const mockPdfContent = `PDF_HEADER: Official Certificate of Compliance\nCERT_NO: ${certificateNo}\nBRANDING: Biofix Water Lab\nVERIFICATION_URL: https://bqms.biofix.com/verify/certificate/${certificateNo}`;
-    return Buffer.from(mockPdfContent);
+    const cert = await prisma.certificate.findUnique({
+      where: { certificateNo },
+      include: { organization: true, batch: true }
+    });
+
+    if (!cert) throw new Error("Certificate not found");
+
+    const pdfContent = `PDF_HEADER: Official Certificate of Compliance\nCERT_NO: ${certificateNo}\nORGANIZATION: ${cert.organization.name}\nBATCH: ${cert.batch?.batchNumber || "N/A"}\nSTATUS: ${cert.status}\nBRANDING: Biofix Water Lab\nVERIFICATION_URL: https://bqms.biofix.com/verify/certificate/${certificateNo}`;
+    return Buffer.from(pdfContent);
   }
 }

@@ -1,3 +1,4 @@
+import prisma from "@/lib/prisma";
 import { Meilisearch } from "meilisearch";
 import { PrismaClient } from "@prisma/client";
 
@@ -6,7 +7,7 @@ const meiliClient = new Meilisearch({
   apiKey: process.env.MEILISEARCH_ADMIN_KEY || "masterKey",
 });
 
-const prisma = new PrismaClient();
+
 
 export async function syncOrganizationsToMeilisearch() {
   const orgs = await prisma.organization.findMany({

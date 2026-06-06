@@ -1,12 +1,10 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DataTable, Column } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-
-const prisma = new PrismaClient();
 
 export default async function BatchesPage() {
   const session = await getServerSession(authOptions);
@@ -23,61 +21,71 @@ export default async function BatchesPage() {
     orderBy: { createdAt: "desc" }
   });
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Batches</h1>
-        {["QC_USER", "LAB_STAFF", "SUPER_ADMIN"].includes(userRole) && (
-          <Link href="/batches/new">
-            <Button>Log New Batch</Button>
+  const columns: Column<any>[] = [
+    {
+      key: "batchNumber",
+      header: "Batch Number",
+      cell: (batch) => <span className="font-mono">{batch.batchNumber}</span>
+    },
+    {
+      key: "organization",
+      header: "Organization",
+      cell: (batch) => <span>{batch.organization.name}</span>
+    },
+    {
+      key: "productionDate",
+      header: "Production Date",
+      cell: (batch) => <span>{batch.productionDate.toLocaleDateString()}</span>
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (batch) => (
+        <Badge variant={
+          batch.verificationStatus === "VERIFIED" ? "default" :
+          batch.verificationStatus === "REJECTED" ? "destructive" :
+          "secondary"
+        }>
+          {batch.verificationStatus}
+        </Badge>
+      )
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      cell: (batch) => (
+        <div className="flex items-center gap-2 justify-end">
+          <Link href={`/batches/${batch.id}`}>
+            <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80">View Details</Button>
           </Link>
+        </div>
+      )
+    }
+  ];
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Batches</h1>
+          <p className="text-muted-foreground mt-1 text-sm">Track and manage production batches.</p>
+        </div>
+        {["QC_USER", "LAB_STAFF", "SUPER_ADMIN"].includes(userRole) && (
+          <div className="ml-auto flex items-center gap-2">
+            <Link href="/batches/new">
+              <Button className="shadow-sm">Log New Batch</Button>
+            </Link>
+          </div>
         )}
       </div>
 
-      <div className="rounded-md border bg-white dark:bg-black">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Batch Number</TableHead>
-              <TableHead>Organization</TableHead>
-              <TableHead>Production Date</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {batches.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
-                  No batches found.
-                </TableCell>
-              </TableRow>
-            ) : (
-              batches.map((batch) => (
-                <TableRow key={batch.id}>
-                  <TableCell className="font-mono">{batch.batchNumber}</TableCell>
-                  <TableCell>{batch.organization.name}</TableCell>
-                  <TableCell>{batch.productionDate.toLocaleDateString()}</TableCell>
-                  <TableCell>
-                    <Badge variant={
-                      batch.verificationStatus === "VERIFIED" ? "default" :
-                      batch.verificationStatus === "REJECTED" ? "destructive" :
-                      "secondary"
-                    }>
-                      {batch.verificationStatus}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Link href={`/batches/${batch.id}`}>
-                      <Button variant="ghost" size="sm">View</Button>
-                    </Link>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable 
+        columns={columns} 
+        data={batches} 
+        searchKey="batchNumber"
+        searchPlaceholder="Search by batch number..."
+        emptyMessage="No batches found."
+      />
     </div>
   );
 }

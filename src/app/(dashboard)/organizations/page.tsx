@@ -1,12 +1,10 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DataTable, Column } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-
-const prisma = new PrismaClient();
 
 export default async function OrganizationsPage() {
   const session = await getServerSession(authOptions);
@@ -22,61 +20,67 @@ export default async function OrganizationsPage() {
     orderBy: { createdAt: "desc" }
   });
 
+  const columns: Column<any>[] = [
+    {
+      key: "name",
+      header: "Name",
+      cell: (org) => <span className="font-medium">{org.name}</span>
+    },
+    {
+      key: "type",
+      header: "Type",
+      cell: (org) => <Badge variant="outline">{org.type}</Badge>
+    },
+    {
+      key: "erp",
+      header: "ERP Reference",
+      cell: (org) => <span>{org.erpReferenceId || "N/A"}</span>
+    },
+    {
+      key: "trustScore",
+      header: "Trust Score",
+      cell: (org) => (
+        org.trustScore !== null ? (
+          <span className={org.trustScore >= 80 ? "text-green-600 font-medium" : "text-amber-600 font-medium"}>
+            {org.trustScore.toFixed(1)}
+          </span>
+        ) : "N/A"
+      )
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      cell: (org) => (
+        <div className="flex justify-end">
+          <Link href={`/organizations/${org.id}`}>
+            <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80">View Details</Button>
+          </Link>
+        </div>
+      )
+    }
+  ];
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Organizations</h1>
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Organizations</h1>
+          <p className="text-muted-foreground mt-1 text-sm">Manage all business entities and partners.</p>
+        </div>
         {userRole === "SUPER_ADMIN" && (
           <Link href="/organizations/new">
-            <Button>Add Organization</Button>
+            <Button className="shadow-sm">Add Organization</Button>
           </Link>
         )}
       </div>
 
-      <div className="rounded-md border bg-white dark:bg-black">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>ERP Reference</TableHead>
-              <TableHead>Trust Score</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {organizations.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
-                  No organizations found.
-                </TableCell>
-              </TableRow>
-            ) : (
-              organizations.map((org) => (
-                <TableRow key={org.id}>
-                  <TableCell className="font-medium">{org.name}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{org.type}</Badge>
-                  </TableCell>
-                  <TableCell>{org.erpReferenceId || "N/A"}</TableCell>
-                  <TableCell>
-                    {org.trustScore !== null ? (
-                      <span className={org.trustScore >= 80 ? "text-green-600 font-medium" : "text-amber-600 font-medium"}>
-                        {org.trustScore.toFixed(1)}
-                      </span>
-                    ) : "N/A"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Link href={`/organizations/${org.id}`}>
-                      <Button variant="ghost" size="sm">View</Button>
-                    </Link>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable 
+        columns={columns} 
+        data={organizations} 
+        searchKey="name"
+        searchPlaceholder="Search by organization name..."
+        emptyMessage="No organizations found."
+      />
     </div>
   );
 }

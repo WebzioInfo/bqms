@@ -4,6 +4,7 @@ import { EntityType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/require-role";
 import { OrganizationService } from "@/services/organization.service";
+import prisma from "@/lib/prisma";
 
 export async function createOrganization(data: {
   name: string;
@@ -38,8 +39,34 @@ export async function getOrganizations() {
 
 export async function getOrganizationBySlug(slug: string) {
   try {
+    await requireRole(["SUPER_ADMIN", "BIOFIX_ADMIN", "QC_USER", "INSPECTOR", "LAB_STAFF", "API_CLIENT"]);
     const org = await OrganizationService.getOrganizationBySlug(slug);
     return { success: true, organization: org };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function updateOrganization(id: string, data: any) {
+  try {
+    await requireRole(["SUPER_ADMIN", "BIOFIX_ADMIN"]);
+    const org = await prisma.organization.update({
+      where: { id },
+      data
+    });
+    revalidatePath("/dashboard/organizations");
+    return { success: true, organization: org };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function deleteOrganization(id: string) {
+  try {
+    await requireRole(["SUPER_ADMIN"]);
+    await prisma.organization.delete({ where: { id } });
+    revalidatePath("/dashboard/organizations");
+    return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
   }

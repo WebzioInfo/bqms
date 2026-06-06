@@ -1,11 +1,12 @@
 "use server";
+import prisma from "@/lib/prisma";
 
 import { PrismaClient, VerificationStatus, ParameterType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/require-role";
 import { BatchService } from "@/services/batch.service";
 
-const prisma = new PrismaClient();
+
 
 export async function createBatch(data: {
   organizationId: string;
@@ -71,6 +72,35 @@ export async function verifyBatch(batchId: string, status: VerificationStatus) {
 
     const batch = await BatchService.verifyBatch(batchId, status);
 
+    revalidatePath("/dashboard/batches");
+    return { success: true, batch };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function deleteBatch(id: string) {
+  try {
+    await requireRole(["SUPER_ADMIN", "BIOFIX_ADMIN"]);
+    await prisma.batch.delete({ where: { id } });
+    revalidatePath("/dashboard/batches");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function updateBatch(id: string, data: any) {
+  try {
+    await requireRole(["SUPER_ADMIN", "BIOFIX_ADMIN", "QC_USER"]);
+    const batch = await prisma.batch.update({
+      where: { id },
+      data: {
+        batchNumber: data.batchNumber,
+        productionDate: data.productionDate ? new Date(data.productionDate) : undefined,
+        organizationId: data.organizationId,
+      }
+    });
     revalidatePath("/dashboard/batches");
     return { success: true, batch };
   } catch (error: any) {
