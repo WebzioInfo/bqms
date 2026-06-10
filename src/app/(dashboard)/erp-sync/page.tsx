@@ -1,12 +1,10 @@
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { DataTable, Column } from "@/components/ui/data-table";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { RefreshCw, ServerCrash, CheckCircle2, Clock } from "lucide-react";
-import { ForceSyncButton, SyncAllButton } from "./sync-buttons";
+import { RefreshCw, ServerCrash } from "lucide-react";
+import { SyncAllButton } from "./sync-buttons";
+import { ERPSyncClient } from "./client";
 
 export default async function ERPSyncPage() {
   const session = await getServerSession(authOptions);
@@ -22,47 +20,6 @@ export default async function ERPSyncPage() {
     where: whereClause,
     orderBy: { updatedAt: "desc" }
   });
-
-  const columns: Column<any>[] = [
-    {
-      key: "name",
-      header: "Organization Name",
-      cell: (org) => <span className="font-medium">{org.name}</span>
-    },
-    {
-      key: "erpReferenceId",
-      header: "ERP Reference ID",
-      cell: (org) => <span className="font-mono text-xs">{org.erpReferenceId}</span>
-    },
-    {
-      key: "lastSync",
-      header: "Last Sync",
-      cell: (org) => (
-        <div className="flex items-center gap-2">
-          <Clock className="h-3 w-3 text-muted-foreground" />
-          <span>{org.updatedAt.toLocaleDateString()} {org.updatedAt.toLocaleTimeString()}</span>
-        </div>
-      )
-    },
-    {
-      key: "status",
-      header: "Sync Status",
-      cell: (org) => (
-        <Badge variant="default" className="bg-green-500/10 text-green-700 hover:bg-green-500/20 border-green-500/20 flex items-center gap-1 w-fit">
-          <CheckCircle2 className="h-3 w-3" /> In Sync
-        </Badge>
-      )
-    },
-    {
-      key: "actions",
-      header: "Actions",
-      cell: (org) => (
-        <div className="flex justify-end">
-          <ForceSyncButton orgId={org.id} />
-        </div>
-      )
-    }
-  ];
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -101,13 +58,7 @@ export default async function ERPSyncPage() {
           <CardDescription>Organizations with an established ERP Reference ID.</CardDescription>
         </CardHeader>
         <CardContent>
-          <DataTable 
-            columns={columns} 
-            data={organizations} 
-            searchKey="name"
-            searchPlaceholder="Search by organization name..."
-            emptyMessage="No ERP integrations found."
-          />
+          <ERPSyncClient data={organizations} />
         </CardContent>
       </Card>
     </div>

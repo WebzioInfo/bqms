@@ -1,10 +1,9 @@
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { DataTable, Column } from "@/components/ui/data-table";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Activity, ShieldAlert, FileSignature } from "lucide-react";
+import { Activity, ShieldAlert } from "lucide-react";
+import { AuditLogsClient } from "./client";
 
 export default async function AuditLogsPage() {
   const session = await getServerSession(authOptions);
@@ -52,43 +51,6 @@ export default async function AuditLogsPage() {
 
   const auditLogs = rawEvents.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
-  const columns: Column<any>[] = [
-    {
-      key: "action",
-      header: "Action",
-      cell: (log) => (
-        <Badge variant="outline" className="font-mono text-xs">
-          {log.action}
-        </Badge>
-      )
-    },
-    {
-      key: "organization",
-      header: "Organization",
-      cell: (log) => <span className="font-medium">{log.organization}</span>
-    },
-    {
-      key: "entity",
-      header: "Entity Reference",
-      cell: (log) => <span className="text-muted-foreground text-sm">{log.entity}</span>
-    },
-    {
-      key: "user",
-      header: "Performed By",
-      cell: (log) => <span>{log.user}</span>
-    },
-    {
-      key: "timestamp",
-      header: "Timestamp",
-      cell: (log) => (
-        <div className="flex flex-col text-sm text-muted-foreground">
-          <span>{log.timestamp.toLocaleDateString()}</span>
-          <span className="text-xs">{log.timestamp.toLocaleTimeString()}</span>
-        </div>
-      )
-    }
-  ];
-
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -125,13 +87,7 @@ export default async function AuditLogsPage() {
           <CardDescription>Aggregated activity across batches, certificates, and inspections.</CardDescription>
         </CardHeader>
         <CardContent>
-          <DataTable 
-            columns={columns} 
-            data={auditLogs} 
-            searchKey="action"
-            searchPlaceholder="Search by action type..."
-            emptyMessage="No audit logs found."
-          />
+          <AuditLogsClient data={auditLogs} />
         </CardContent>
       </Card>
     </div>

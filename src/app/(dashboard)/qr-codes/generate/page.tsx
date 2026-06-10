@@ -16,6 +16,7 @@ export default function GenerateQRCodesPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [orgs, setOrgs] = useState<any[]>([]);
+  const [selectedOrgId, setSelectedOrgId] = useState<string>("");
 
   useEffect(() => {
     getOrganizations().then((res) => {
@@ -31,7 +32,7 @@ export default function GenerateQRCodesPage() {
     const formData = new FormData(e.currentTarget);
     const data = {
       count: parseInt(formData.get("count") as string, 10),
-      organizationId: formData.get("organizationId") as string,
+      organizationId: selectedOrgId,
     };
 
     if (!data.organizationId) {
@@ -42,7 +43,7 @@ export default function GenerateQRCodesPage() {
 
     const res = await generateQRCodes(data.organizationId, null, data.count);
     if (res.success) {
-      router.push("/qr-codes");
+      router.push("/dashboard/qr-codes");
       router.refresh();
     } else {
       setError(res.error || "Failed to generate QR codes");
@@ -82,7 +83,7 @@ export default function GenerateQRCodesPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="organizationId">Organization</Label>
-                <Select name="organizationId" required>
+                <Select required value={selectedOrgId} onValueChange={(val) => setSelectedOrgId(val as string)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select target organization..." />
                   </SelectTrigger>

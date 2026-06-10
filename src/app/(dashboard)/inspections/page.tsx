@@ -1,10 +1,9 @@
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { DataTable, Column } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
+import { InspectionsClient } from "./client";
 
 export default async function InspectionsPage() {
   const session = await getServerSession(authOptions);
@@ -25,48 +24,6 @@ export default async function InspectionsPage() {
     orderBy: { inspectionDate: "desc" }
   });
 
-  const columns: Column<any>[] = [
-    {
-      key: "organization",
-      header: "Organization",
-      cell: (insp) => <span className="font-medium">{insp.organization.name}</span>
-    },
-    {
-      key: "inspector",
-      header: "Inspector",
-      cell: (insp) => <span>{insp.inspector.name || insp.inspector.email}</span>
-    },
-    {
-      key: "date",
-      header: "Date",
-      cell: (insp) => <span>{insp.inspectionDate.toLocaleDateString()}</span>
-    },
-    {
-      key: "status",
-      header: "Status",
-      cell: (insp) => (
-        <Badge variant={
-          insp.complianceStatus === "PASS" ? "default" :
-          insp.complianceStatus === "FAIL" ? "destructive" :
-          "secondary"
-        }>
-          {insp.complianceStatus}
-        </Badge>
-      )
-    },
-    {
-      key: "actions",
-      header: "Actions",
-      cell: (insp) => (
-        <div className="flex justify-end gap-2">
-          <Link href={`/inspections/${insp.id}`}>
-            <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/10">View Details</Button>
-          </Link>
-        </div>
-      )
-    }
-  ];
-
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -83,13 +40,7 @@ export default async function InspectionsPage() {
         )}
       </div>
 
-      <DataTable 
-        columns={columns} 
-        data={inspections} 
-        searchKey="organization.name"
-        searchPlaceholder="Search inspections..."
-        emptyMessage="No inspections found."
-      />
+      <InspectionsClient data={inspections} />
     </div>
   );
 }

@@ -1,12 +1,13 @@
-import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { QrCode, Scan, ShieldCheck, MapPin } from "lucide-react";
 
-export default async function QRCodeAnalyticsPage({ params }: { params: { id: string } }) {
+export default async function ViewQRCodePage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params;
   const qr = await prisma.qRCode.findUnique({
-    where: { id: params.id },
+    where: { id: resolvedParams.id },
     include: { 
       organization: true, 
       batch: true,
@@ -18,7 +19,7 @@ export default async function QRCodeAnalyticsPage({ params }: { params: { id: st
   });
 
   if (!qr) {
-    redirect("/qr-codes");
+    notFound();
   }
 
   return (

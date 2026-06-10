@@ -1,13 +1,9 @@
 import prisma from "@/lib/prisma";
-import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
-
-
+import { QRCodesClient } from "./client";
 
 export default async function QRCodesPage() {
   const session = await getServerSession(authOptions);
@@ -25,58 +21,22 @@ export default async function QRCodesPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">QR Codes</h1>
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">QR Codes</h1>
+          <p className="text-muted-foreground mt-1 text-sm">Manage and track generated QR codes.</p>
+        </div>
         {["SUPER_ADMIN", "BIOFIX_ADMIN"].includes(userRole) && (
-          <Link href="/qr-codes/generate">
-            <Button>Generate QR Codes</Button>
-          </Link>
+          <div className="ml-auto flex items-center gap-2">
+            <Link href="/qr-codes/generate">
+              <Button className="shadow-sm">Generate QR Codes</Button>
+            </Link>
+          </div>
         )}
       </div>
 
-      <div className="rounded-md border bg-white dark:bg-black">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Code</TableHead>
-              <TableHead>Organization</TableHead>
-              <TableHead>Batch</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Total Scans</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {qrCodes.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
-                  No QR codes found.
-                </TableCell>
-              </TableRow>
-            ) : (
-              qrCodes.map((qr) => (
-                <TableRow key={qr.id}>
-                  <TableCell className="font-mono">{qr.code}</TableCell>
-                  <TableCell>{qr.organization?.name || "N/A"}</TableCell>
-                  <TableCell>{qr.batch?.batchNumber || "N/A"}</TableCell>
-                  <TableCell>
-                    <Badge variant={qr.status === "ACTIVE" ? "default" : "destructive"}>
-                      {qr.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{qr._count.scans}</TableCell>
-                  <TableCell className="text-right">
-                    <Link href={`/qr-codes/${qr.id}`}>
-                      <Button variant="ghost" size="sm">Analytics</Button>
-                    </Link>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <QRCodesClient data={qrCodes} />
     </div>
   );
 }

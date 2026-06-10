@@ -49,12 +49,30 @@ export async function getOrganizationBySlug(slug: string) {
 
 export async function updateOrganization(id: string, data: any) {
   try {
-    await requireRole(["SUPER_ADMIN", "BIOFIX_ADMIN"]);
+    const session = await requireRole(["SUPER_ADMIN", "BIOFIX_ADMIN"]);
+    // @ts-ignore
+    const userId = session?.user?.id;
+
     const org = await prisma.organization.update({
       where: { id },
       data
     });
+
+    if (userId) {
+      await prisma.auditLog.create({
+        data: {
+          userId,
+          action: "UPDATED",
+          entity: "Organization",
+          entityId: id,
+          details: `Updated organization details for ${org.name}`
+        }
+      });
+    }
+
     revalidatePath("/dashboard/organizations");
+    revalidatePath(`/dashboard/organizations/${id}`);
+    revalidatePath(`/dashboard/organizations/${id}/edit`);
     return { success: true, organization: org };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -63,7 +81,25 @@ export async function updateOrganization(id: string, data: any) {
 
 export async function deleteOrganization(id: string) {
   try {
-    await requireRole(["SUPER_ADMIN"]);
+    const session = await requireRole(["SUPER_ADMIN"]);
+    // @ts-ignore
+    const userId = session?.user?.id;
+
+    // Fetch org name for logging before it's deleted
+    const org = await prisma.organization.findUnique({ where: { id } });
+
+    if (userId && org) {
+      await prisma.auditLog.create({
+        data: {
+          userId,
+          action: "DELETED",
+          entity: "Organization",
+          entityId: id,
+          details: `Deleted organization ${org.name}`
+        }
+      });
+    }
+
     await prisma.organization.delete({ where: { id } });
     revalidatePath("/dashboard/organizations");
     return { success: true };
