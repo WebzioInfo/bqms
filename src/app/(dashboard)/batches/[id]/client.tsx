@@ -62,6 +62,13 @@ export function EditBatchClient({ batch, organizations }: { batch: any, organiza
     { key: "actions", header: "Actions", cell: (r) => <div className="flex justify-end"><Link href={`/laboratory-reports/${r.id}`}><Button variant="ghost" size="sm">View</Button></Link></div> }
   ];
 
+  const waterTestColumns: Column<any>[] = [
+    { key: "reportNumber", header: "Report No", cell: (r) => <span className="font-mono text-xs">{r.reportNumber}</span> },
+    { key: "status", header: "Status", cell: (r) => <Badge variant={r.status === "COMPLETED" ? "default" : r.status === "FAILED" ? "destructive" : "secondary"}>{r.status}</Badge> },
+    { key: "date", header: "Due Date", cell: (r) => r.dueDate ? new Date(r.dueDate).toLocaleDateString() : "N/A" },
+    { key: "actions", header: "Actions", cell: (r) => <div className="flex justify-end"><Link href={`/water-test-reports/${r.id}`}><Button variant="ghost" size="sm">Details</Button></Link></div> }
+  ];
+
   const certificateColumns: Column<any>[] = [
     { key: "certificateNo", header: "Cert Number", cell: (c) => <span className="font-mono">{c.certificateNo}</span> },
     { key: "status", header: "Status", cell: (c) => <Badge variant={c.status === "ACTIVE" ? "default" : "destructive"}>{c.status}</Badge> },
@@ -92,7 +99,8 @@ export function EditBatchClient({ batch, organizations }: { batch: any, organiza
         <div className="overflow-x-auto pb-2">
           <TabsList className="inline-flex w-max min-w-full justify-start md:w-auto md:min-w-0">
             <TabsTrigger value="overview"><PackageSearch className="h-4 w-4 mr-2" /> Overview</TabsTrigger>
-            <TabsTrigger value="labreports"><Beaker className="h-4 w-4 mr-2" /> Lab Reports</TabsTrigger>
+            <TabsTrigger value="watertests"><Beaker className="h-4 w-4 mr-2" /> Water Tests</TabsTrigger>
+            <TabsTrigger value="labreports"><Beaker className="h-4 w-4 mr-2" /> Legacy Lab Reports</TabsTrigger>
             <TabsTrigger value="certificates"><FileSignature className="h-4 w-4 mr-2" /> Certificates</TabsTrigger>
             <TabsTrigger value="settings"><Settings className="h-4 w-4 mr-2" /> Settings</TabsTrigger>
           </TabsList>
@@ -127,16 +135,36 @@ export function EditBatchClient({ batch, organizations }: { batch: any, organiza
           </div>
         </TabsContent>
 
+        <TabsContent value="watertests" className="outline-none">
+          <Card className="shadow-sm border-muted">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Water Quality Tests</CardTitle>
+                <CardDescription>New water quality reports associated with this batch.</CardDescription>
+              </div>
+              <Link href={`/water-test-reports/new?batchId=${batch.id}`}>
+                <Button size="sm">Add Report</Button>
+              </Link>
+            </CardHeader>
+            <CardContent>
+              <DataTable 
+                columns={waterTestColumns} 
+                data={batch.waterTestReports || []} 
+                searchKey="reportNumber"
+                searchPlaceholder="Search reports..."
+                emptyMessage="No water test reports found."
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="labreports" className="outline-none">
           <Card className="shadow-sm border-muted">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle>Laboratory Reports</CardTitle>
-                <CardDescription>Tests associated with this batch.</CardDescription>
+                <CardTitle>Legacy Laboratory Reports</CardTitle>
+                <CardDescription>Legacy tests associated with this batch.</CardDescription>
               </div>
-              <Link href={`/laboratory-reports/new?batchId=${batch.id}`}>
-                <Button size="sm">Add Report</Button>
-              </Link>
             </CardHeader>
             <CardContent>
               <DataTable 

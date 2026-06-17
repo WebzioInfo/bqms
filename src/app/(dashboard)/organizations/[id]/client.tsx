@@ -13,6 +13,7 @@ import { Building2, ShieldCheck, FileSignature, QrCode, Beaker, PackageSearch, H
 import Link from "next/link";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Legend, LineChart, Line } from "recharts";
 import { format, subDays, isAfter } from "date-fns";
+import { WaterTestParametersTab } from "./parameters-tab";
 
 export function OrganizationDetailClient({ organization, labReports, auditLogs, metrics }: any) {
   const router = useRouter();
@@ -190,6 +191,7 @@ export function OrganizationDetailClient({ organization, labReports, auditLogs, 
             <div className="border-b px-2">
               <TabsList className="h-12 bg-transparent border-none w-full justify-start gap-4">
                 <TabsTrigger value="overview" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-2 data-[state=active]:shadow-none">Overview</TabsTrigger>
+                <TabsTrigger value="parameters" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-2 data-[state=active]:shadow-none">Parameters</TabsTrigger>
                 <TabsTrigger value="analytics" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-2 data-[state=active]:shadow-none">Analytics</TabsTrigger>
                 <TabsTrigger value="inspections" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-2 data-[state=active]:shadow-none">Inspections</TabsTrigger>
                 <TabsTrigger value="certificates" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-2 data-[state=active]:shadow-none">Certificates</TabsTrigger>
@@ -250,6 +252,10 @@ export function OrganizationDetailClient({ organization, labReports, auditLogs, 
                     </div>
                   )}
                 </div>
+              </TabsContent>
+
+              <TabsContent value="parameters" className="mt-0">
+                <WaterTestParametersTab organizationId={organization.id} parameters={organization.waterTestParams || []} />
               </TabsContent>
 
               <TabsContent value="analytics" className="mt-0">

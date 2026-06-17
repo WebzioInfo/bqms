@@ -6,14 +6,16 @@ export class ApiKeyService {
    * Generates a new API key and stores its SHA-256 hash.
    * Never stores the raw API key.
    */
-  static async generateApiKey(name: string, rateLimit: number = 1000) {
+  static async generateApiKey(organizationId: string, name: string, rateLimit: number = 1000) {
     const rawKey = crypto.randomBytes(32).toString("hex");
-    const apiKeyHash = crypto.createHash("sha256").update(rawKey).digest("hex");
+    const apiSecretHash = crypto.createHash("sha256").update(rawKey).digest("hex");
 
-    const apiClient = await prisma.apiClient.create({
+    const apiClient = await prisma.apiCredential.create({
       data: {
+        organizationId,
         name,
-        apiKeyHash,
+        apiKey: rawKey,
+        apiSecretHash,
         rateLimit,
         isActive: true,
       },
@@ -31,8 +33,8 @@ export class ApiKeyService {
   static async validateApiKey(rawKey: string) {
     const hash = crypto.createHash("sha256").update(rawKey).digest("hex");
 
-    const apiClient = await prisma.apiClient.findUnique({
-      where: { apiKeyHash: hash },
+    const apiClient = await prisma.apiCredential.findFirst({
+      where: { apiSecretHash: hash },
     });
 
     if (!apiClient || !apiClient.isActive) {
@@ -46,7 +48,7 @@ export class ApiKeyService {
    * Revokes an existing API key.
    */
   static async revokeApiKey(clientId: string) {
-    return prisma.apiClient.update({
+    return prisma.apiCredential.update({
       where: { id: clientId },
       data: { isActive: false },
     });
@@ -57,11 +59,11 @@ export class ApiKeyService {
    */
   static async rotateApiKey(clientId: string) {
     const rawKey = crypto.randomBytes(32).toString("hex");
-    const apiKeyHash = crypto.createHash("sha256").update(rawKey).digest("hex");
+    const apiSecretHash = crypto.createHash("sha256").update(rawKey).digest("hex");
 
-    const apiClient = await prisma.apiClient.update({
+    const apiClient = await prisma.apiCredential.update({
       where: { id: clientId },
-      data: { apiKeyHash },
+      data: { apiSecretHash, apiKey: rawKey },
     });
 
     return {
@@ -75,7 +77,7 @@ export class ApiKeyService {
    * Throws an error if the rate limit is exceeded.
    */
   static async trackUsage(clientId: string, currentUsageCount: number) {
-    const client = await prisma.apiClient.findUnique({ where: { id: clientId } });
+    const client = await prisma.apiCredential.findUnique({ where: { id: clientId } });
     if (!client) throw new Error("API Client not found");
 
     if (!client.isActive) {

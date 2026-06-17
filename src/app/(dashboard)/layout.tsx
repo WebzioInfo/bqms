@@ -42,7 +42,7 @@ export default async function DashboardLayout({
              <div className="ml-auto font-medium text-sm capitalize px-3 py-1 bg-primary/10 text-primary rounded-full">{userRole.replace("_", " ").toLowerCase()}</div>
           </div>
         </header>
-        <main className="flex-1 items-start p-4 sm:px-6 sm:py-0 md:gap-8">
+        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-8 lg:p-6">
           {children}
         </main>
       </div>

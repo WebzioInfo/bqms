@@ -38,33 +38,66 @@ enum ParameterType {
   PHYSICAL
 }
 
+enum WaterTestStatus {
+  PENDING
+  SAMPLE_SENT
+  UNDER_TESTING
+  AWAITING_RESULT
+  COMPLETED
+  FAILED
+  REJECTED
+}
+
+enum BatchBlockAction {
+  ALLOW
+  WARN
+  BLOCK
+}
+
 model User {
-  id                  String        @id @default(cuid())
-  email               String        @unique
+  id                  String            @id @default(cuid())
+  email               String            @unique
   passwordHash        String
   name                String?
-  role                Role          @default(QC_USER)
+  role                Role              @default(QC_USER)
   organizationId      String?
-  organization        Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  inspections         Inspection[]  @relation("InspectorRelation")
+  organization        Organization?     @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  inspections         Inspection[]      @relation("InspectorRelation")
   auditLogs           AuditLog[]
   resetTokenHash      String?
   resetTokenExpires   DateTime?
-  failedLoginAttempts Int           @default(0)
+  failedLoginAttempts Int               @default(0)
   lockedUntil         DateTime?
   lastLoginAt         DateTime?
   avatarId            String?
-  avatar              CloudFile?    @relation("UserAvatar", fields: [avatarId], references: [id])
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
+  avatar              CloudFile?        @relation("UserAvatar", fields: [avatarId], references: [id])
+  createdWaterTests   WaterTestReport[] @relation("CreatedWaterTests")
+
+  ncrsReported     NCR[]                 @relation("NCRReporter")
+  rcaReported      RootCauseAnalysis[]   @relation("RCAReporter")
+  caAssigned       CorrectiveAction[]    @relation("CAAssignee")
+  paAssigned       PreventiveAction[]    @relation("PAAssignee")
+  verifiedCAPAs    Verification[]        @relation("VerificationUser")
+  closedCAPAs      Closure[]             @relation("ClosureUser")
+  assignments      ApprovalAssignment[]  @relation("AssignmentUser")
+  historyApprovals ApprovalHistory[]     @relation("HistoryApprover")
+  docsCreated      DocumentVersion[]     @relation("DocCreator")
+  docsApproved     DocumentApproval[]    @relation("DocApprover")
+  docsRead         DocumentReadReceipt[] @relation("DocReader")
+  maintLogs        MaintenanceLog[]      @relation("MaintPerformer")
+  calibLogs        CalibrationLog[]      @relation("CalibPerformer")
+  breakdownLogs    BreakdownLog[]        @relation("BreakdownReporter")
+  disposals        DisposalApproval[]    @relation("DisposalApprover")
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
 }
 
 model Organization {
-  id                String              @id @default(cuid())
+  id                String                @id @default(cuid())
   name              String
-  slug              String              @unique
+  slug              String                @unique
   type              EntityType
-  erpReferenceId    String?             @unique
+  erpReferenceId    String?               @unique
   trustScore        Float?
   email             String?
   phone             String?
@@ -75,10 +108,32 @@ model Organization {
   qrCodes           QRCode[]
   certificates      Certificate[]
   trustScoreHistory TrustScoreHistory[]
+  waterTestParams   WaterTestParameter[]
+  waterTestReports  WaterTestReport[]
+  batchBlockSetting BatchBlockAction      @default(WARN)
   logoId            String?
-  logo              CloudFile?          @relation("OrganizationLogo", fields: [logoId], references: [id])
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
+  logo              CloudFile?            @relation("OrganizationLogo", fields: [logoId], references: [id])
+  apiCredentials    ApiCredential[]
+  webhookSubs       WebhookSubscription[]
+  reportTemplates   ReportTemplate[]
+  scheduledReports  ScheduledReport[]
+  auditLogs         AuditLog[]
+
+  boms              BillOfMaterial[]
+  supplierLots      SupplierLot[]
+  rawMaterialLots   RawMaterialLot[]
+  ncrs              NCR[]
+  capas             CAPA[]
+  approvalTemplates ApprovalTemplate[]
+  documents         Document[]
+  assets            Asset[]
+  spareParts        SparePart[]
+  retentionSamples  RetentionSample[]
+  storageLocations  StorageLocation[]
+  subscription      CompanySubscription?
+  usageTracking     UsageTracking[]
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
 
   @@index([slug])
   @@index([type])
@@ -92,42 +147,60 @@ model Batch {
   productionDate     DateTime
   verificationStatus VerificationStatus @default(PENDING)
   labReports         LaboratoryReport[]
+  waterTestReports   WaterTestReport[]
   certificates       Certificate[]
   qrCodes            QRCode[]
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+
+  consumptions      BatchConsumption[]
+  parentGenealogies BatchGenealogy[]   @relation("ParentBatch")
+  childGenealogies  BatchGenealogy[]   @relation("ChildBatch")
+  retentionSamples  RetentionSample[]  @relation("SampleBatch")
+
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  deletedBy String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([batchNumber])
   @@index([organizationId, verificationStatus])
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([organizationId, productionDate(sort: Desc)])
 }
 
 model LaboratoryReport {
-  id             String                @id @default(cuid())
-  batchId        String
-  batch          Batch                 @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  testDate       DateTime
-  reportedBy     String
-  parameters     LaboratoryParameter[]
-  reportFileUrl  String?
-  reportFileId   String?
-  cloudFile      CloudFile?            @relation("LabReportFile", fields: [reportFileId], references: [id])
-  isCompliant    Boolean               @default(false)
-  createdAt      DateTime              @default(now())
-  updatedAt      DateTime              @updatedAt
+  id            String                @id @default(cuid())
+  batchId       String
+  batch         Batch                 @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  testDate      DateTime
+  reportedBy    String
+  parameters    LaboratoryParameter[]
+  reportFileUrl String?
+  reportFileId  String?
+  cloudFile     CloudFile?            @relation("LabReportFile", fields: [reportFileId], references: [id])
+  isCompliant   Boolean               @default(false)
+
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  deletedBy String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model LaboratoryParameter {
-  id                 String           @id @default(cuid())
-  reportId           String
-  report             LaboratoryReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  name               String
-  type               ParameterType
-  value              Float
-  unit               String
-  standardMin        Float?
-  standardMax        Float?
-  isCompliant        Boolean
-  createdAt          DateTime         @default(now())
+  id          String           @id @default(cuid())
+  reportId    String
+  report      LaboratoryReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  name        String
+  type        ParameterType
+  value       Float
+  unit        String
+  standardMin Float?
+  standardMax Float?
+  isCompliant Boolean
+  createdAt   DateTime         @default(now())
 
   @@index([name])
   @@index([type])
@@ -145,8 +218,13 @@ model Inspection {
   reportUrl        String?
   reportFileId     String?
   cloudFile        CloudFile?   @relation("InspectionReport", fields: [reportFileId], references: [id])
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  deletedBy String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Certificate {
@@ -162,6 +240,10 @@ model Certificate {
   pdfUrl         String?
   pdfFileId      String?
   cloudFile      CloudFile?   @relation("CertificatePdf", fields: [pdfFileId], references: [id])
+
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  deletedBy String?
 }
 
 model QRCode {
@@ -194,11 +276,11 @@ model VerificationScan {
 }
 
 model ERPSyncLog {
-  id             String   @id @default(cuid())
-  syncDate       DateTime @default(now())
-  status         String
-  recordsSynced  Int
-  errorDetails   String?
+  id            String   @id @default(cuid())
+  syncDate      DateTime @default(now())
+  status        String
+  recordsSynced Int
+  errorDetails  String?
 }
 
 model TrustScoreHistory {
@@ -213,41 +295,597 @@ model TrustScoreHistory {
   @@index([recordedAt])
 }
 
-model ApiClient {
-  id         String   @id @default(cuid())
-  name       String
-  apiKeyHash String   @unique
-  rateLimit  Int      @default(1000)
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
+model ApiCredential {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  apiKey         String       @unique
+  apiSecretHash  String
+  ipWhitelist    String[]
+  rateLimit      Int          @default(1000)
+  isActive       Boolean      @default(true)
+  lastUsedAt     DateTime?
+  createdAt      DateTime     @default(now())
+
+  usageLogs ApiUsageLog[]
+}
+
+model ApiUsageLog {
+  id             String        @id @default(cuid())
+  credentialId   String
+  credential     ApiCredential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+  endpoint       String
+  method         String
+  statusCode     Int
+  responseTimeMs Int
+  ipAddress      String?
+  timestamp      DateTime      @default(now())
+
+  @@index([credentialId, timestamp])
+}
+
+model WebhookSubscription {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  url            String
+  secret         String?
+  events         String[]
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+}
+
+model ReportTemplate {
+  id             String        @id @default(cuid())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  module         String
+  layoutConfig   Json
+  brandingConfig Json
+  createdAt      DateTime      @default(now())
+}
+
+model ScheduledReport {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reportType     String
+  frequency      String
+  format         String
+  deliveryMethod String
+  recipients     String[]
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
 }
 
 model AuditLog {
-  id        String   @id @default(cuid())
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  action    String
-  entity    String
-  entityId  String
-  details   String?
-  createdAt DateTime @default(now())
+  id             String        @id @default(cuid())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action         String
+  entity         String
+  entityId       String
+  details        String?
+  createdAt      DateTime      @default(now())
 
   @@index([entity, entityId])
   @@index([action])
+  @@index([organizationId, createdAt(sort: Desc)])
 }
 
 model CloudFile {
-  id          String   @id @default(cuid())
-  publicId    String   @unique
-  secureUrl   String
-  metadata    Json?
-  
-  users       User[]   @relation("UserAvatar")
-  orgs        Organization[] @relation("OrganizationLogo")
-  certs       Certificate[]  @relation("CertificatePdf")
-  inspections Inspection[]   @relation("InspectionReport")
-  labReports  LaboratoryReport[] @relation("LabReportFile")
-  qrCodes     QRCode[] @relation("QRCodeImage")
+  id        String @id @default(cuid())
+  publicId  String @unique
+  secureUrl String
+  metadata  Json?
 
-  createdAt   DateTime @default(now())
+  users             User[]             @relation("UserAvatar")
+  orgs              Organization[]     @relation("OrganizationLogo")
+  certs             Certificate[]      @relation("CertificatePdf")
+  inspections       Inspection[]       @relation("InspectionReport")
+  labReports        LaboratoryReport[] @relation("LabReportFile")
+  qrCodes           QRCode[]           @relation("QRCodeImage")
+  reportAttachments ReportAttachment[]
+
+  createdAt DateTime @default(now())
+}
+
+model WaterTestParameter {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  type           ParameterType
+  unit           String
+  acceptableMin  Float?
+  acceptableMax  Float?
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  results WaterTestResult[]
+
+  @@unique([organizationId, name])
+}
+
+model WaterTestReport {
+  id                    String          @id @default(cuid())
+  companyId             String
+  company               Organization    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  batchId               String          @unique
+  batch                 Batch           @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  reportNumber          String          @unique
+  productionDate        DateTime
+  sampleCollectedDate   DateTime?
+  sampleCollectedBy     String?
+  laboratoryName        String?
+  laboratoryReferenceNo String?
+  status                WaterTestStatus @default(PENDING)
+  dueDate               DateTime?
+  resultEnteredDate     DateTime?
+  remarks               String?
+
+  createdBy String
+  creator   User   @relation("CreatedWaterTests", fields: [createdBy], references: [id])
+
+  results     WaterTestResult[]
+  attachments ReportAttachment[]
+
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  deletedBy String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([dueDate, status])
+  @@index([companyId, status])
+  @@index([companyId, status, dueDate])
+}
+
+model WaterTestResult {
+  id          String             @id @default(cuid())
+  reportId    String
+  report      WaterTestReport    @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  parameterId String
+  parameter   WaterTestParameter @relation(fields: [parameterId], references: [id])
+
+  testResult Float?
+  isPass     Boolean?
+  remarks    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([reportId, parameterId])
+}
+
+model ReportAttachment {
+  id          String          @id @default(cuid())
+  reportId    String
+  report      WaterTestReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  cloudFileId String
+  cloudFile   CloudFile       @relation(fields: [cloudFileId], references: [id])
+  uploadedBy  String
+  createdAt   DateTime        @default(now())
+}
+
+// --- TRACEABILITY & BOM ---
+model BillOfMaterial {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  productName    String       @db.VarChar(150)
+  version        String       @db.VarChar(50)
+  components     Json
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model SupplierLot {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  supplierName   String       @db.VarChar(150)
+  materialName   String       @db.VarChar(150)
+  lotNumber      String       @unique @db.VarChar(100)
+  receivedDate   DateTime
+  quantity       Float
+  unit           String       @db.VarChar(50)
+  isAccepted     Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+
+  rawMaterialLots RawMaterialLot[]
+}
+
+model RawMaterialLot {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  materialName   String       @db.VarChar(150)
+  internalLotNo  String       @unique @db.VarChar(100)
+  supplierLotId  String?      @db.Uuid
+  supplierLot    SupplierLot? @relation(fields: [supplierLotId], references: [id])
+  quantity       Float
+  unit           String       @db.VarChar(50)
+  expiryDate     DateTime?
+  status         String       @default("QUARANTINE") @db.VarChar(50)
+  createdAt      DateTime     @default(now())
+
+  consumptions BatchConsumption[]
+}
+
+model BatchConsumption {
+  id            String         @id @default(uuid()) @db.Uuid
+  batchId       String // CUID references Batch
+  batch         Batch          @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  materialLotId String         @db.Uuid
+  materialLot   RawMaterialLot @relation(fields: [materialLotId], references: [id])
+  quantityUsed  Float
+  unit          String         @db.VarChar(50)
+  consumedAt    DateTime       @default(now())
+}
+
+model BatchGenealogy {
+  id               String   @id @default(uuid()) @db.Uuid
+  parentBatchId    String // CUID
+  parentBatch      Batch    @relation("ParentBatch", fields: [parentBatchId], references: [id], onDelete: Cascade)
+  childBatchId     String // CUID
+  childBatch       Batch    @relation("ChildBatch", fields: [childBatchId], references: [id], onDelete: Cascade)
+  relationshipType String   @db.VarChar(50)
+  createdAt        DateTime @default(now())
+}
+
+// --- CAPA & QUALITY ---
+model NCR {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  ncrNumber      String       @unique @db.VarChar(100)
+  description    String
+  reportedBy     String // CUID User
+  reporter       User         @relation("NCRReporter", fields: [reportedBy], references: [id])
+  status         String       @default("OPEN") @db.VarChar(50)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  capas CAPA[]
+}
+
+model CAPA {
+  id             String       @id @default(uuid()) @db.Uuid
+  ncrId          String?      @db.Uuid
+  ncr            NCR?         @relation(fields: [ncrId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  capaNumber     String       @unique @db.VarChar(100)
+  description    String
+  status         String       @default("DRAFT") @db.VarChar(50)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  rootCause    RootCauseAnalysis?
+  corrective   CorrectiveAction?
+  preventive   PreventiveAction?
+  verification Verification?
+  closure      Closure?
+}
+
+model RootCauseAnalysis {
+  id             String   @id @default(uuid()) @db.Uuid
+  capaId         String   @unique @db.Uuid
+  capa           CAPA     @relation(fields: [capaId], references: [id], onDelete: Cascade)
+  analysisMethod String   @db.VarChar(100)
+  findings       String
+  identifiedBy   String // CUID User
+  identifiedUser User     @relation("RCAReporter", fields: [identifiedBy], references: [id])
+  createdAt      DateTime @default(now())
+}
+
+model CorrectiveAction {
+  id            String    @id @default(uuid()) @db.Uuid
+  capaId        String    @unique @db.Uuid
+  capa          CAPA      @relation(fields: [capaId], references: [id], onDelete: Cascade)
+  actionDetails String
+  assignedTo    String // CUID User
+  assignee      User      @relation("CAAssignee", fields: [assignedTo], references: [id])
+  dueDate       DateTime
+  status        String    @default("PENDING") @db.VarChar(50)
+  completedAt   DateTime?
+}
+
+model PreventiveAction {
+  id            String    @id @default(uuid()) @db.Uuid
+  capaId        String    @unique @db.Uuid
+  capa          CAPA      @relation(fields: [capaId], references: [id], onDelete: Cascade)
+  actionDetails String
+  assignedTo    String // CUID User
+  assignee      User      @relation("PAAssignee", fields: [assignedTo], references: [id])
+  dueDate       DateTime
+  status        String    @default("PENDING") @db.VarChar(50)
+  completedAt   DateTime?
+}
+
+model Verification {
+  id          String   @id @default(uuid()) @db.Uuid
+  capaId      String   @unique @db.Uuid
+  capa        CAPA     @relation(fields: [capaId], references: [id], onDelete: Cascade)
+  verifiedBy  String // CUID User
+  verifier    User     @relation("VerificationUser", fields: [verifiedBy], references: [id])
+  notes       String
+  isEffective Boolean
+  verifiedAt  DateTime @default(now())
+}
+
+model Closure {
+  id       String   @id @default(uuid()) @db.Uuid
+  capaId   String   @unique @db.Uuid
+  capa     CAPA     @relation(fields: [capaId], references: [id], onDelete: Cascade)
+  closedBy String // CUID User
+  closer   User     @relation("ClosureUser", fields: [closedBy], references: [id])
+  remarks  String
+  closedAt DateTime @default(now())
+}
+
+// --- APPROVAL ENGINE ---
+model ApprovalTemplate {
+  id             String         @id @default(uuid()) @db.Uuid
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String         @db.VarChar(150)
+  entityType     String         @db.VarChar(50) // e.g. "CAPA", "Document"
+  isActive       Boolean        @default(true)
+  steps          ApprovalStep[]
+  createdAt      DateTime       @default(now())
+}
+
+model ApprovalStep {
+  id           String           @id @default(uuid()) @db.Uuid
+  templateId   String           @db.Uuid
+  template     ApprovalTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  stepOrder    Int
+  roleRequired Role
+  createdAt    DateTime         @default(now())
+}
+
+model ApprovalAssignment {
+  id             String   @id @default(uuid()) @db.Uuid
+  entityType     String   @db.VarChar(50)
+  entityId       String // CUID or UUID
+  stepOrder      Int
+  assignedToRole Role
+  assignedToUser String? // CUID User
+  user           User?    @relation("AssignmentUser", fields: [assignedToUser], references: [id])
+  status         String   @default("PENDING") @db.VarChar(50)
+  createdAt      DateTime @default(now())
+}
+
+model ApprovalHistory {
+  id         String   @id @default(uuid()) @db.Uuid
+  entityType String   @db.VarChar(50)
+  entityId   String // CUID or UUID
+  approvedBy String // CUID User
+  approver   User     @relation("HistoryApprover", fields: [approvedBy], references: [id])
+  action     String   @db.VarChar(50) // APPROVED, REJECTED
+  remarks    String?
+  createdAt  DateTime @default(now())
+}
+
+// --- DOCUMENT CONTROL ---
+model Document {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  docNumber      String       @unique @db.VarChar(100)
+  title          String       @db.VarChar(200)
+  type           String       @db.VarChar(50) // SOP, MANUAL
+  status         String       @default("DRAFT") @db.VarChar(50)
+  createdAt      DateTime     @default(now())
+
+  versions DocumentVersion[]
+}
+
+model DocumentVersion {
+  id            String   @id @default(uuid()) @db.Uuid
+  documentId    String   @db.Uuid
+  document      Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  versionNumber String   @db.VarChar(20)
+  fileUrl       String
+  createdBy     String // CUID User
+  creator       User     @relation("DocCreator", fields: [createdBy], references: [id])
+  createdAt     DateTime @default(now())
+
+  approvals    DocumentApproval[]
+  readReceipts DocumentReadReceipt[]
+}
+
+model DocumentApproval {
+  id         String          @id @default(uuid()) @db.Uuid
+  versionId  String          @db.Uuid
+  version    DocumentVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  approvedBy String // CUID User
+  approver   User            @relation("DocApprover", fields: [approvedBy], references: [id])
+  approvedAt DateTime        @default(now())
+}
+
+model DocumentReadReceipt {
+  id        String          @id @default(uuid()) @db.Uuid
+  versionId String          @db.Uuid
+  version   DocumentVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  userId    String // CUID User
+  user      User            @relation("DocReader", fields: [userId], references: [id])
+  readAt    DateTime        @default(now())
+
+  @@unique([versionId, userId])
+}
+
+// --- EQUIPMENT MANAGEMENT ---
+model Asset {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assetCode      String       @unique @db.VarChar(100)
+  name           String       @db.VarChar(150)
+  type           String       @db.VarChar(50) // PRODUCTION, LAB
+  status         String       @default("ACTIVE") @db.VarChar(50)
+  createdAt      DateTime     @default(now())
+
+  maintenancePlans MaintenancePlan[]
+  maintenanceLogs  MaintenanceLog[]
+  calibrationLogs  CalibrationLog[]
+  breakdownLogs    BreakdownLog[]
+}
+
+model MaintenancePlan {
+  id            String  @id @default(uuid()) @db.Uuid
+  assetId       String  @db.Uuid
+  asset         Asset   @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  taskName      String  @db.VarChar(150)
+  frequencyDays Int
+  isActive      Boolean @default(true)
+}
+
+model MaintenanceLog {
+  id            String   @id @default(uuid()) @db.Uuid
+  assetId       String   @db.Uuid
+  asset         Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  performedBy   String // CUID User
+  performer     User     @relation("MaintPerformer", fields: [performedBy], references: [id])
+  taskDetails   String
+  datePerformed DateTime @default(now())
+}
+
+model CalibrationLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  assetId        String   @db.Uuid
+  asset          Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  performedBy    String // CUID User
+  performer      User     @relation("CalibPerformer", fields: [performedBy], references: [id])
+  result         String   @db.VarChar(50) // PASS, FAIL
+  certificateUrl String?
+  datePerformed  DateTime @default(now())
+  nextDueDate    DateTime
+}
+
+model BreakdownLog {
+  id            String    @id @default(uuid()) @db.Uuid
+  assetId       String    @db.Uuid
+  asset         Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  reportedBy    String // CUID User
+  reporter      User      @relation("BreakdownReporter", fields: [reportedBy], references: [id])
+  issue         String
+  downTimeStart DateTime
+  downTimeEnd   DateTime?
+  resolution    String?
+}
+
+model SparePart {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  partNumber     String       @unique @db.VarChar(100)
+  name           String       @db.VarChar(150)
+  stockQuantity  Int          @default(0)
+  minimumStock   Int          @default(0)
+}
+
+// --- RETENTION SAMPLES ---
+model RetentionSample {
+  id                String          @id @default(uuid()) @db.Uuid
+  organizationId    String
+  organization      Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  batchId           String // CUID
+  batch             Batch           @relation("SampleBatch", fields: [batchId], references: [id])
+  storageLocationId String          @db.Uuid
+  location          StorageLocation @relation(fields: [storageLocationId], references: [id])
+  quantityStored    Float
+  unit              String          @db.VarChar(50)
+  expiryDate        DateTime
+  status            String          @default("STORED") @db.VarChar(50)
+  createdAt         DateTime        @default(now())
+
+  disposal DisposalApproval?
+}
+
+model StorageLocation {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  code           String       @unique @db.VarChar(100)
+  description    String       @db.VarChar(200)
+
+  samples RetentionSample[]
+}
+
+model DisposalApproval {
+  id         String          @id @default(uuid()) @db.Uuid
+  sampleId   String          @unique @db.Uuid
+  sample     RetentionSample @relation(fields: [sampleId], references: [id], onDelete: Cascade)
+  approvedBy String // CUID User
+  approver   User            @relation("DisposalApprover", fields: [approvedBy], references: [id])
+  disposedAt DateTime        @default(now())
+}
+
+// --- SUBSCRIPTION & BILLING ---
+model SubscriptionPlan {
+  id             String   @id @default(uuid()) @db.Uuid
+  name           String   @db.VarChar(100)
+  monthlyPrice   Float
+  maxUsers       Int
+  maxApiRequests Int
+  features       String[]
+  isActive       Boolean  @default(true)
+
+  subscriptions CompanySubscription[]
+}
+
+model CompanySubscription {
+  id                 String           @id @default(uuid()) @db.Uuid
+  organizationId     String           @unique // CUID
+  organization       Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  planId             String           @db.Uuid
+  plan               SubscriptionPlan @relation(fields: [planId], references: [id])
+  status             String           @default("ACTIVE") @db.VarChar(50)
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+
+  invoices Invoice[]
+}
+
+model UsageTracking {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String // CUID
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  metricType     String       @db.VarChar(50) // USERS, API_CALLS, STORAGE
+  value          Int          @default(0)
+  periodMonth    String       @db.VarChar(7) // YYYY-MM
+
+  @@unique([organizationId, metricType, periodMonth])
+}
+
+model Invoice {
+  id             String              @id @default(uuid()) @db.Uuid
+  subscriptionId String              @db.Uuid
+  subscription   CompanySubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  amount         Float
+  status         String              @default("DRAFT") @db.VarChar(50)
+  dueDate        DateTime
+  issuedAt       DateTime            @default(now())
+
+  payment Payment?
+}
+
+model Payment {
+  id             String   @id @default(uuid()) @db.Uuid
+  invoiceId      String   @unique @db.Uuid
+  invoice        Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amountPaid     Float
+  paymentMethod  String   @db.VarChar(50)
+  transactionRef String   @db.VarChar(150)
+  paidAt         DateTime @default(now())
 }

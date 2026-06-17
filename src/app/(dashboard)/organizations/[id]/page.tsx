@@ -45,6 +45,9 @@ export default async function OrganizationDetailPage({ params }: { params: Promi
       },
       trustScoreHistory: {
         orderBy: { recordedAt: "asc" }
+      },
+      waterTestParams: {
+        orderBy: [{ type: "asc" }, { name: "asc" }]
       }
     }
   });

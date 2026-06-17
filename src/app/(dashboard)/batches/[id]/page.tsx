@@ -6,7 +6,7 @@ export default async function EditBatchPage({ params }: { params: Promise<{ id: 
   const resolvedParams = await params;
   const batch = await prisma.batch.findUnique({
     where: { id: resolvedParams.id },
-    include: { organization: true, certificates: true, labReports: true }
+    include: { organization: true, certificates: true, labReports: true, waterTestReports: true }
   });
 
   if (!batch) {

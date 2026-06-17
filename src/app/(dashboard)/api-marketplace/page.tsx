@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { KeyRound, ShieldAlert, Code2 } from "lucide-react";
+import Link from "next/link";
 import { ApiMarketplaceClient } from "./client";
 
 export default async function ApiMarketplacePage() {
@@ -13,11 +14,11 @@ export default async function ApiMarketplacePage() {
   // @ts-ignore
   const orgId = session?.user?.organizationId;
 
-  // We will map API usage/readiness to the organizations table.
-  const whereClause = userRole !== "SUPER_ADMIN" && orgId ? { id: orgId } : {};
+  const whereClause = userRole !== "SUPER_ADMIN" && orgId ? { organizationId: orgId } : {};
 
-  const organizations = await prisma.organization.findMany({
+  const credentials = await prisma.apiCredential.findMany({
     where: whereClause,
+    include: { organization: true, usageLogs: { take: 100, orderBy: { timestamp: 'desc' } } },
     orderBy: { createdAt: "desc" }
   });
 
@@ -28,10 +29,12 @@ export default async function ApiMarketplacePage() {
           <h1 className="text-3xl font-bold tracking-tight">API Marketplace</h1>
           <p className="text-muted-foreground mt-1 text-sm">Manage API keys and developer access for integrations.</p>
         </div>
-        <Button className="shadow-sm">
-          <Code2 className="mr-2 h-4 w-4" />
-          API Documentation
-        </Button>
+        <Link href="/api-marketplace/docs">
+          <Button className="shadow-sm">
+            <Code2 className="mr-2 h-4 w-4" />
+            API Documentation
+          </Button>
+        </Link>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3 mb-6">
@@ -41,7 +44,7 @@ export default async function ApiMarketplacePage() {
             <KeyRound className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{organizations.filter(o => o.erpReferenceId).length}</div>
+            <div className="text-2xl font-bold">{credentials.length}</div>
           </CardContent>
         </Card>
         <Card className="shadow-sm border-muted">
@@ -61,7 +64,7 @@ export default async function ApiMarketplacePage() {
           <CardDescription>Manage programmatic access credentials for the BQMS platform.</CardDescription>
         </CardHeader>
         <CardContent>
-          <ApiMarketplaceClient data={organizations} />
+          <ApiMarketplaceClient data={credentials} />
         </CardContent>
       </Card>
     </div>

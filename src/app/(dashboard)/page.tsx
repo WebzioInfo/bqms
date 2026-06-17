@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
-import { Award, Building2, ClipboardCheck, QrCode } from "lucide-react";
+import { Award, Building2, ClipboardCheck, QrCode, Beaker, Clock, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
@@ -15,6 +15,7 @@ export default async function DashboardPage() {
   const orgId = session?.user?.organizationId;
 
   const whereClause = userRole !== "SUPER_ADMIN" && orgId ? { organizationId: orgId } : {};
+  const waterTestWhereClause = userRole !== "SUPER_ADMIN" && orgId ? { companyId: orgId } : {};
 
   const [
     totalOrganizations,
@@ -23,6 +24,8 @@ export default async function DashboardPage() {
     recentInspections,
     recentBatches,
     qrScans,
+    pendingTests,
+    overdueTests
   ] = await Promise.all([
     prisma.organization.count(),
     prisma.certificate.count({ where: { status: "ACTIVE", ...whereClause } }),
@@ -30,7 +33,14 @@ export default async function DashboardPage() {
     prisma.inspection.findMany({ where: whereClause, take: 5, orderBy: { createdAt: "desc" }, include: { organization: true } }),
     prisma.batch.findMany({ where: whereClause, take: 5, orderBy: { createdAt: "desc" }, include: { organization: true } }),
     prisma.verificationScan.count(), // Depending on scope
+    prisma.waterTestReport.count({ where: { status: "PENDING", ...waterTestWhereClause } }),
+    prisma.waterTestReport.count({ where: { status: { notIn: ["COMPLETED", "FAILED"] }, dueDate: { lt: new Date() }, ...waterTestWhereClause } }),
   ]);
+
+  const allWaterTests = await prisma.waterTestReport.findMany({ where: waterTestWhereClause, select: { status: true } });
+  const completedTests = allWaterTests.filter(t => t.status === "COMPLETED" || t.status === "FAILED");
+  const passedTests = completedTests.filter(t => t.status === "COMPLETED");
+  const complianceRate = completedTests.length > 0 ? Math.round((passedTests.length / completedTests.length) * 100) : 0;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -82,6 +92,41 @@ export default async function DashboardPage() {
             <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{qrScans}</div>
           </CardContent>
         </Card>
+        
+        {(userRole === "QC_USER" || userRole === "LAB_STAFF") && (
+          <>
+            <Card className="hover:shadow-md transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                <CardTitle className="text-sm font-medium">Pending Tests</CardTitle>
+                <Beaker className="h-4 w-4 text-blue-500 opacity-80" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-blue-600">{pendingTests}</div>
+              </CardContent>
+            </Card>
+            
+            <Card className="hover:shadow-md transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                <CardTitle className="text-sm font-medium">Overdue Tests</CardTitle>
+                <Clock className="h-4 w-4 text-rose-500 opacity-80" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-rose-600">{overdueTests}</div>
+                {overdueTests > 0 && <Badge variant="destructive" className="mt-2 animate-pulse">Escalated</Badge>}
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-md transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                <CardTitle className="text-sm font-medium">Compliance Rate</CardTitle>
+                <Award className="h-4 w-4 text-emerald-500 opacity-80" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-emerald-600">{complianceRate}%</div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">

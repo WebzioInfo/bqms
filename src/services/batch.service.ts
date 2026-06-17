@@ -23,6 +23,31 @@ export class BatchService {
     batchNumber: string;
     productionDate: Date;
   }) {
+    // Implement Batch Blocking logic
+    const org = await prisma.organization.findUnique({
+      where: { id: data.organizationId },
+      include: {
+        batches: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          include: { waterTestReports: true }
+        }
+      }
+    });
+
+    if (org && org.batches.length > 0) {
+      const lastBatch = org.batches[0];
+      const hasIncompleteTests = lastBatch.waterTestReports.length === 0 || 
+        lastBatch.waterTestReports.some(r => r.status !== "COMPLETED");
+
+      if (hasIncompleteTests) {
+        if (org.batchBlockSetting === "BLOCK") {
+          throw new Error("Cannot create batch: Previous batch water quality tests are incomplete or failed.");
+        }
+        // If WARN, we allow creation but the UI should show a warning (which is handled in the UI if we return a flag, but for now we just allow it).
+      }
+    }
+
     return prisma.batch.create({
       data: {
         organizationId: data.organizationId,

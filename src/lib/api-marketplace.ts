@@ -7,14 +7,16 @@ const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
 
 import crypto from "crypto";
 
-export async function createApiKey(name: string) {
+export async function createApiKey(name: string, organizationId: string) {
   const rawKey = `bqms_${crypto.randomBytes(24).toString("hex")}`;
-  const apiKeyHash = crypto.createHash("sha256").update(rawKey).digest("hex");
+  const apiSecretHash = crypto.createHash("sha256").update(rawKey).digest("hex");
 
-  const client = await prisma.apiClient.create({
+  const client = await prisma.apiCredential.create({
     data: {
+      organizationId,
       name,
-      apiKeyHash,
+      apiKey: rawKey,
+      apiSecretHash,
       rateLimit: 1000 // default
     }
   });
@@ -33,8 +35,8 @@ export async function checkRateLimit(apiKeyHash: string) {
   }
 
   // Fetch client limit (ideally cached)
-  const client = await prisma.apiClient.findUnique({
-    where: { apiKeyHash }
+  const client = await prisma.apiCredential.findFirst({
+    where: { apiSecretHash: apiKeyHash }
   });
 
   const limit = client?.rateLimit || 1000;
