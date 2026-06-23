@@ -25,41 +25,19 @@ export const authOptions: import("next-auth").NextAuthOptions = {
 
         if (!user) return null;
 
-        // Check if account is locked
-        if (user.lockedUntil && user.lockedUntil > new Date()) {
-          throw new Error("Account is temporarily locked due to multiple failed login attempts. Please try again later.");
-        }
-
         // Verify password using bcrypt
         const isPasswordValid = await bcrypt.compare(credentials.password, user.passwordHash);
         
         if (!isPasswordValid) {
-          // Increment failed attempts
-          const newFailedAttempts = user.failedLoginAttempts + 1;
-          const lockedUntil = newFailedAttempts >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null; // Lock for 15 minutes
-          
-          await prisma.user.update({
-            where: { id: user.id },
-            data: { failedLoginAttempts: newFailedAttempts, lockedUntil }
-          });
-          
-          if (lockedUntil) {
-            throw new Error("Account locked due to too many failed attempts.");
-          }
           throw new Error("Invalid email or password.");
         }
-
-        // Success - reset attempts and update last login
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { failedLoginAttempts: 0, lockedUntil: null, lastLoginAt: new Date() }
-        });
 
         return {
           id: user.id,
           email: user.email,
           name: user.name,
-          role: user.role
+          role: user.role,
+          organizationId: user.organizationId
         };
       }
     })
@@ -74,6 +52,7 @@ export const authOptions: import("next-auth").NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = (user as any).role;
+        token.organizationId = (user as any).organizationId;
       }
       return token;
     },
@@ -81,6 +60,7 @@ export const authOptions: import("next-auth").NextAuthOptions = {
       if (token) {
         (session as any).user.id = token.id as string;
         ((session as any).user as any).role = token.role;
+        ((session as any).user as any).organizationId = token.organizationId;
       }
       return session;
     }

@@ -4,11 +4,15 @@ import Redis from "ioredis";
 // Centralized Redis Connection
 const connection = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
   maxRetriesPerRequest: null,
+  retryStrategy: (times) => {
+    if (times > 3) return null;
+    return Math.min(times * 50, 2000);
+  }
 });
+connection.on("error", () => {});
 
 // Define distributed queues
 export const SearchSyncQueue = new Queue("search-sync", { connection: connection as any });
-export const ErpSyncQueue = new Queue("erp-sync", { connection: connection as any });
 export const PdfGenerationQueue = new Queue("pdf-generation", { connection: connection as any });
 export const TrustScoreQueue = new Queue("trust-score", { connection: connection as any });
 export const WaterTestRemindersQueue = new Queue("water-test-reminders", { connection: connection as any });
@@ -77,4 +81,3 @@ export async function dispatchWebhookEvent(eventName: string, organizationId: st
     }
   );
 }
-

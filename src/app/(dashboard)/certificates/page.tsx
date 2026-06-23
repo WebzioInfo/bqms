@@ -1,42 +1,28 @@
-import prisma from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getCertificates } from "@/app/actions/certificate";
+import { CertificatesClient } from "./client";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { CertificatesClient } from "./client";
+import { Plus } from "lucide-react";
 
 export default async function CertificatesPage() {
-  const session = await getServerSession(authOptions);
-  // @ts-ignore
-  const userRole = session?.user?.role;
-  // @ts-ignore
-  const orgId = session?.user?.organizationId;
-
-  const whereClause = userRole !== "SUPER_ADMIN" && orgId ? { organizationId: orgId } : {};
-
-  const certificates = await prisma.certificate.findMany({
-    where: whereClause,
-    include: { organization: true, batch: true },
-    orderBy: { issueDate: "desc" }
-  });
+  const result = await getCertificates();
+  const certificates = result.success ? result.data : [];
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Certificates</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Manage quality compliance certificates.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Compliance Certificates</h1>
+          <p className="text-muted-foreground mt-1 text-sm">Manage BIS IS 14543 certificates and digital compliance records.</p>
         </div>
-        {["SUPER_ADMIN", "BIOFIX_ADMIN"].includes(userRole) && (
-          <div className="ml-auto flex items-center gap-2">
-            <Link href="/certificates/new">
-              <Button className="shadow-sm">Issue Certificate</Button>
-            </Link>
-          </div>
-        )}
+        <Link href="/certificates/new">
+          <Button className="shadow-sm">
+            <Plus className="mr-2 h-4 w-4" /> Issue Certificate
+          </Button>
+        </Link>
       </div>
 
-      <CertificatesClient data={certificates} />
+      <CertificatesClient data={certificates || []} />
     </div>
   );
 }

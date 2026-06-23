@@ -1,43 +1,32 @@
+import { OrganizationForm } from "../../components/organization-form";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { getOrganizationById } from "@/app/actions/organization";
 import { notFound } from "next/navigation";
-import prisma from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { EditOrganizationClient } from "./client";
 
 export default async function EditOrganizationPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = await params;
-  const session = await getServerSession(authOptions);
-  
-  // @ts-ignore
-  const userRole = session?.user?.role;
-  // @ts-ignore
-  const orgId = session?.user?.organizationId;
-
-  // Only SUPER_ADMIN or BIOFIX_ADMIN can edit organizations. Or the org admin itself.
-  if (userRole !== "SUPER_ADMIN" && userRole !== "BIOFIX_ADMIN") {
-    if (orgId !== resolvedParams.id) {
-      notFound();
-    }
-  }
-
-  const organization = await prisma.organization.findUnique({
-    where: { id: resolvedParams.id },
-    include: {
-      _count: {
-        select: {
-          users: true,
-          batches: true,
-          inspections: true,
-          qrCodes: true,
-          certificates: true
-        }
-      }
-    }
-  });
-
-  if (!organization) {
+  const { id } = await params;
+  const result = await getOrganizationById(id);
+  if (!result.success || !result.data) {
     notFound();
   }
 
-  return <EditOrganizationClient organization={organization} />;
+  return (
+    <div className="space-y-6 max-w-3xl mx-auto animate-in fade-in duration-500">
+      <div className="flex items-center gap-4">
+        <Link href={`/organizations/${id}`}>
+          <Button variant="ghost" size="icon" className="rounded-full">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Edit Organization</h1>
+          <p className="text-muted-foreground mt-1 text-sm">Update company details and licensing information.</p>
+        </div>
+      </div>
+
+      <OrganizationForm initialData={result.data} />
+    </div>
+  );
 }

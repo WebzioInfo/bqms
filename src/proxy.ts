@@ -44,15 +44,14 @@ export default withAuth(
       let redirectPath = "/";
       
       switch(token.role) {
-        case "SUPER_ADMIN":
-        case "BIOFIX_ADMIN":
+        case "PLATFORM_ADMIN":
           redirectPath = "/";
           break;
-        case "INSPECTOR":
-          redirectPath = "/inspections";
+        case "COMPANY_ADMIN":
+          redirectPath = "/";
           break;
-        case "QC_USER":
-          redirectPath = "/batches";
+        case "QC":
+          redirectPath = "/test-reports";
           break;
       }
       

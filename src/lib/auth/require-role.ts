@@ -25,24 +25,35 @@ export class AuthenticationError extends Error {
  * @returns The authenticated session if validation passes
  */
 export async function requireRole(allowedRoles: Role[], organizationId?: string) {
-  // @ts-ignore - Assuming standard next-auth setup with GET handler exported
-  const { GET: authOptions } = await import("@/app/api/auth/[...nextauth]/route");
+  const { authOptions } = await import("@/app/api/auth/[...nextauth]/route");
   const session = await getServerSession(authOptions);
 
   if (!session || !(session as any).user) {
     throw new AuthenticationError();
   }
 
-  const userRole = ((session as any).user as any).role as Role;
+  let userRole = ((session as any).user as any).role as Role;
+  
+  // Fallback: If role is undefined in session (e.g. old JWT token), fetch from DB
+  if (!userRole) {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: (session as any).user.id },
+      select: { role: true, organizationId: true }
+    });
+    if (!dbUser) throw new AuthenticationError("User not found in database.");
+    userRole = dbUser.role;
+    // Update session object for current request
+    ((session as any).user as any).role = dbUser.role;
+    ((session as any).user as any).organizationId = dbUser.organizationId;
+  }
   
   if (!allowedRoles.includes(userRole)) {
     throw new AuthorizationError(`Role ${userRole} is not authorized for this action.`);
   }
 
   // Row-level authorization check
-  // Note: if a user is SUPER_ADMIN, they might bypass org checks depending on business logic.
-  // We'll enforce that if organizationId is passed, the user must belong to it or be a SUPER_ADMIN.
-  if (organizationId && userRole !== "SUPER_ADMIN") {
+  // PLATFORM_ADMIN bypasses all organization checks.
+  if (organizationId && userRole !== "PLATFORM_ADMIN") {
     // Assuming session object contains organizationId, we need to fetch it or ensure it's in JWT.
     // For now, if we don't have it in session, we would need to query the user, or we can assume we 
     // fetch the user to be safe and secure.

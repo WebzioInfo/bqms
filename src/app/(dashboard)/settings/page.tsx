@@ -1,81 +1,74 @@
-import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { redirect } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import prisma from "@/lib/prisma";
 
 export default async function SettingsPage() {
   const session = await getServerSession(authOptions);
-  
-  if (!session?.user?.email) {
-    redirect("/login");
-  }
+  if (!session) redirect("/login");
 
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    include: { organization: true }
-  });
+  const role = ((session as any).user as any).role;
+  const organizationId = ((session as any).user as any).organizationId;
 
-  if (!user) {
-    redirect("/login");
+  let org = null;
+  if (organizationId) {
+    org = await prisma.organization.findUnique({ where: { id: organizationId } });
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 max-w-4xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Account Settings</h1>
-        <p className="text-muted-foreground mt-1 text-sm">Manage your profile and account preferences.</p>
+    <div className="flex-1 space-y-4 max-w-2xl">
+      <div className="flex items-center justify-between">
+        <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
       </div>
 
-      <div className="grid gap-6">
-        <Card className="shadow-sm border-muted">
+      {role === "PLATFORM_ADMIN" ? (
+        <Card>
           <CardHeader>
-            <CardTitle>Profile Information</CardTitle>
-            <CardDescription>Update your personal details.</CardDescription>
+            <CardTitle>Global Platform Settings</CardTitle>
+            <CardDescription>Configure application-wide parameters.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <form className="space-y-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input id="name" defaultValue={user.name || ""} placeholder="John Doe" readOnly />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email Address</Label>
-                <Input id="email" type="email" defaultValue={user.email} readOnly className="bg-muted" />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="role">System Role</Label>
-                <Input id="role" defaultValue={user.role} readOnly className="bg-muted font-mono" />
-              </div>
-              <Button type="button" disabled>Save Profile</Button>
-            </form>
+          <CardContent className="space-y-4">
+             <div className="space-y-2">
+               <label className="text-sm font-medium">Default Retention Period (Days)</label>
+               <Input defaultValue="365" />
+             </div>
+             <div className="space-y-2">
+               <label className="text-sm font-medium">Max Upload Size (MB)</label>
+               <Input defaultValue="50" />
+             </div>
+             <Button>Save Settings</Button>
           </CardContent>
         </Card>
-
-        {user.organization && (
-          <Card className="shadow-sm border-muted">
-            <CardHeader>
-              <CardTitle>Organization Details</CardTitle>
-              <CardDescription>The organization your account is linked to.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="grid gap-2">
-                  <Label>Organization Name</Label>
-                  <Input defaultValue={user.organization.name} readOnly className="bg-muted" />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Slug</Label>
-                  <Input defaultValue={user.organization.slug || "N/A"} readOnly className="bg-muted" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Organization Settings</CardTitle>
+            <CardDescription>Manage your company profile and preferences.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+             <div className="space-y-2">
+               <label className="text-sm font-medium">Company Name</label>
+               <Input defaultValue={org?.name || ""} disabled />
+             </div>
+             <div className="space-y-2">
+               <label className="text-sm font-medium">License Number (BIS)</label>
+               <Input defaultValue={org?.licenseNumber || ""} disabled />
+             </div>
+             <div className="space-y-2">
+               <label className="text-sm font-medium">Contact Email</label>
+               <Input defaultValue={org?.contactEmail || ""} />
+             </div>
+             <div className="space-y-2">
+               <label className="text-sm font-medium">Address</label>
+               <Input defaultValue={org?.address || ""} />
+             </div>
+             <Button>Update Organization</Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

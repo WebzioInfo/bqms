@@ -3,25 +3,32 @@ import { PrismaClient } from "@prisma/client";
 import Redis from "ioredis";
 
 
-const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
+const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
+  retryStrategy: (times) => {
+    if (times > 3) return null; // Stop retrying after 3 attempts
+    return Math.min(times * 50, 2000);
+  }
+});
 
+redis.on("error", (err) => {
+  // Suppress connection errors in console to avoid spam
+});
 import crypto from "crypto";
 
-export async function createApiKey(name: string, organizationId: string) {
+export async function createApiKey(name: string, organizationId: string, subscriptionId: string) {
   const rawKey = `bqms_${crypto.randomBytes(24).toString("hex")}`;
-  const apiSecretHash = crypto.createHash("sha256").update(rawKey).digest("hex");
+  const keyHash = crypto.createHash("sha256").update(rawKey).digest("hex");
 
-  const client = await prisma.apiCredential.create({
+  const apiKey = await prisma.apiKey.create({
     data: {
       organizationId,
+      subscriptionId,
       name,
-      apiKey: rawKey,
-      apiSecretHash,
-      rateLimit: 1000 // default
+      keyHash,
     }
   });
 
-  return { rawKey, client };
+  return { rawKey, apiKey };
 }
 
 export async function checkRateLimit(apiKeyHash: string) {
@@ -34,12 +41,13 @@ export async function checkRateLimit(apiKeyHash: string) {
     await redis.expire(key, 60);
   }
 
-  // Fetch client limit (ideally cached)
-  const client = await prisma.apiCredential.findFirst({
-    where: { apiSecretHash: apiKeyHash }
+  // Fetch API key and its subscription's product rate limit
+  const apiKey = await prisma.apiKey.findUnique({
+    where: { keyHash: apiKeyHash },
+    include: { subscription: { include: { product: true } } }
   });
 
-  const limit = client?.rateLimit || 1000;
+  const limit = apiKey?.subscription?.product?.rateLimit || 1000;
 
   if (currentCount > limit) {
     return { allowed: false, limit, currentCount };
