@@ -2,28 +2,18 @@ import { ReportForm } from "../components/report-form";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { getOrganizations } from "@/app/actions/organization";
-import { getWaterTestParameters, getRecentReportsWithResults } from "@/app/actions/report";
 
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getOrganizations } from "@/app/actions/organization";
 
 export default async function NewTestReportPage() {
   const [orgResult, session] = await Promise.all([
     getOrganizations(),
     getServerSession(authOptions)
   ]);
-  const organizations = orgResult.success ? orgResult.data : [];
-  const currentUserId = (session?.user as any)?.id || "unknown";
-  const userOrgId = (session?.user as any)?.organizationId || (organizations[0]?.id || "");
-
-  const [paramResult, recentResult] = await Promise.all([
-    getWaterTestParameters(),
-    userOrgId ? getRecentReportsWithResults(userOrgId) : Promise.resolve({ success: true, data: [] })
-  ]);
-
-  const parameters = paramResult.success ? paramResult.data : [];
-  const recentReports = recentResult.success ? recentResult.data : [];
+  const organizations = orgResult.success && orgResult.data ? orgResult.data : [];
+  const userOrgId = (session?.user as any)?.organizationId || (organizations?.[0]?.id || "");
 
   return (
     <div className="space-y-6 max-w-[1600px] w-full mx-auto px-4 animate-in fade-in duration-500">
@@ -34,16 +24,13 @@ export default async function NewTestReportPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">New Test Report</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Create a new quality control test report.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Add Water Test Report</h1>
+          <p className="text-muted-foreground mt-1 text-sm">Create a new quality control test report based on the laboratory worksheet.</p>
         </div>
       </div>
 
       <ReportForm 
-        organizations={organizations || []} 
-        currentUserId={currentUserId}
-        parameters={parameters || []}
-        recentReports={recentReports || []}
+        organizationId={userOrgId}
       />
     </div>
   );

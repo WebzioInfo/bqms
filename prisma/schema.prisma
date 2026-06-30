@@ -136,12 +136,16 @@ model WaterTestReport {
   
   batchNumber    String          @db.VarChar(100)
   sampleNumber   String?         @db.VarChar(100)
-  reportType     String          @default("PACKAGED_DRINKING_WATER") @db.VarChar(100)
+  productionDate DateTime?
+  reportType     String          @default("DAILY") @db.VarChar(100)
   
   status         WaterTestStatus @default(DRAFT)
-  sampleTime     DateTime
-  testedBy       String          // Name of QC person
+  sampleTime     DateTime?
+  testedBy       String?         // Name of QC person
+  collectedBy    String?         @db.VarChar(150)
+  verifiedBy     String?         @db.VarChar(150)
   remarks        String?         @db.Text
+  attachments    Json?
 
   // Standard Fields
   isActive       Boolean         @default(true)
@@ -190,7 +194,8 @@ model WaterTestResult {
   parameterId      String
   parameter        WaterTestParameter @relation(fields: [parameterId], references: [id])
   
-  value            Float
+  value            Float?
+  stringValue      String?
   isPass           Boolean
 
   // Standard Fields

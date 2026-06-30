@@ -28,12 +28,26 @@ async function main() {
 
   // Create Global Parameters
   const params = [
-    { name: "pH", category: "CHEMISTRY", unit: "pH", minAcceptable: 6.5, maxAcceptable: 8.5 },
-    { name: "TDS", category: "CHEMISTRY", unit: "mg/L", minAcceptable: 0, maxAcceptable: 500 },
+    // Physical & Chemical
+    { name: "pH", category: "PHYSICAL", unit: "—", minAcceptable: 6.5, maxAcceptable: 8.5 },
+    { name: "TDS", category: "PHYSICAL", unit: "mg/L", minAcceptable: 0, maxAcceptable: 500 },
     { name: "Turbidity", category: "PHYSICAL", unit: "NTU", minAcceptable: 0, maxAcceptable: 1 },
-    { name: "Conductivity", category: "CHEMISTRY", unit: "µS/cm", minAcceptable: 0, maxAcceptable: 800 },
-    { name: "Total Coliforms", category: "MICROBIOLOGY", unit: "CFU/100ml", minAcceptable: 0, maxAcceptable: 0 },
-    { name: "E. Coli", category: "MICROBIOLOGY", unit: "CFU/100ml", minAcceptable: 0, maxAcceptable: 0 },
+    { name: "Sulphate", category: "CHEMICAL", unit: "mg/L", minAcceptable: 0, maxAcceptable: 200 },
+    { name: "Colour", category: "PHYSICAL", unit: "Hazen", minAcceptable: 0, maxAcceptable: 5 },
+    { name: "Odour", category: "PHYSICAL", unit: "Descriptor", minAcceptable: 0, maxAcceptable: 0 },
+    { name: "Taste", category: "PHYSICAL", unit: "Descriptor", minAcceptable: 0, maxAcceptable: 0 },
+    { name: "Residual Free Chlorine", category: "CHEMICAL", unit: "mg/L", minAcceptable: 0.2, maxAcceptable: 1.0 },
+    { name: "Alkalinity", category: "CHEMICAL", unit: "mg/L", minAcceptable: 0, maxAcceptable: 200 },
+    { name: "Chloride", category: "CHEMICAL", unit: "mg/L", minAcceptable: 0, maxAcceptable: 250 },
+
+    // Microbiology
+    { name: "E.coli", category: "MICROBIOLOGY", unit: "CFU/100ml", minAcceptable: 0, maxAcceptable: 0 },
+    { name: "Coliform", category: "MICROBIOLOGY", unit: "CFU/100ml", minAcceptable: 0, maxAcceptable: 0 },
+    { name: "Pseudomonas", category: "MICROBIOLOGY", unit: "CFU/250ml", minAcceptable: 0, maxAcceptable: 0 },
+    { name: "Clostridia", category: "MICROBIOLOGY", unit: "CFU/100ml", minAcceptable: 0, maxAcceptable: 0 },
+    { name: "Aerobic Microbial Count 22°C", category: "MICROBIOLOGY", unit: "CFU/ml", minAcceptable: 0, maxAcceptable: 100 },
+    { name: "Aerobic Microbial Count 37°C", category: "MICROBIOLOGY", unit: "CFU/ml", minAcceptable: 0, maxAcceptable: 20 },
+    { name: "Yeast & Mold", category: "MICROBIOLOGY", unit: "CFU/100ml", minAcceptable: 0, maxAcceptable: 0 },
   ];
   
   console.log("Creating parameters...");
@@ -152,8 +166,8 @@ async function main() {
       }
     });
 
-    // Create 20 Reports per company (Total 100)
-    for (let b = 1; b <= 20; b++) {
+    // Create 3 Reports per company (Total 15)
+    for (let b = 1; b <= 3; b++) {
       const isFailed = faker.number.int({ min: 1, max: 10 }) > 8;
       const batchNumberStr = `B-${faker.string.alphanumeric(6).toUpperCase()}-${b}`;
       
@@ -172,7 +186,7 @@ async function main() {
       });
 
       // Create Results
-      for (const p of createdParams) {
+      const resultsData = createdParams.map(p => {
         let value = 0;
         let isPass = true;
         
@@ -186,15 +200,17 @@ async function main() {
           value = faker.number.float({ min: p.minAcceptable || 0, max: (p.maxAcceptable || 100) * 0.9 });
         }
 
-        await prisma.waterTestResult.create({
-          data: {
-            reportId: report.id,
-            parameterId: p.id,
-            value,
-            isPass
-          }
-        });
-      }
+        return {
+          reportId: report.id,
+          parameterId: p.id,
+          value,
+          isPass
+        };
+      });
+
+      await prisma.waterTestResult.createMany({
+        data: resultsData
+      });
 
       // Create Certificate if Passed
       if (!isFailed) {

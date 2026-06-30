@@ -1,6 +1,14 @@
 import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient().$extends({
+const globalForPrisma = global as unknown as { basePrisma: PrismaClient };
+
+export const basePrisma =
+  globalForPrisma.basePrisma ||
+  new PrismaClient();
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.basePrisma = basePrisma;
+
+const prisma = basePrisma.$extends({
   query: {
     $allModels: {
       async create({ model, operation, args, query }) {
@@ -10,10 +18,10 @@ const prisma = new PrismaClient().$extends({
         try {
           const dataAny = args.data as any;
           const resultAny = result as any;
-          const userId = dataAny?.createdBy || dataAny?.updatedBy || "System";
+          const userId = dataAny?.createdBy || dataAny?.updatedBy || null;
           const organizationId = dataAny?.organizationId || resultAny?.organizationId || null;
 
-          await new PrismaClient().auditLog.create({
+          await basePrisma.auditLog.create({
             data: {
               entityName: model,
               action: "CREATE",
@@ -35,10 +43,10 @@ const prisma = new PrismaClient().$extends({
         try {
           const dataAny = args.data as any;
           const resultAny = result as any;
-          const userId = dataAny?.updatedBy || "System";
+          const userId = dataAny?.updatedBy || null;
           const organizationId = dataAny?.organizationId || resultAny?.organizationId || null;
 
-          await new PrismaClient().auditLog.create({
+          await basePrisma.auditLog.create({
             data: {
               entityName: model,
               action: "UPDATE",
@@ -59,10 +67,10 @@ const prisma = new PrismaClient().$extends({
 
         try {
           const resultAny = result as any;
-          const userId = "System";
+          const userId = null;
           const organizationId = resultAny?.organizationId || null;
 
-          await new PrismaClient().auditLog.create({
+          await basePrisma.auditLog.create({
             data: {
               entityName: model,
               action: "DELETE",

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Outfit } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const inter = Inter({
@@ -33,21 +34,19 @@ export default function RootLayout({
       className={`${inter.variable} ${outfit.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-                navigator.serviceWorker.getRegistrations().then((registrations) => {
-                  for (const registration of registrations) {
-                    registration.unregister().then((success) => {
-                      if (success) console.log('Unregistered stale service worker');
-                    });
-                  }
-                });
-              }
-            `
-          }}
-        />
+        <Script id="unregister-sw" strategy="afterInteractive">
+          {`
+            if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+              navigator.serviceWorker.getRegistrations().then((registrations) => {
+                for (const registration of registrations) {
+                  registration.unregister().then((success) => {
+                    if (success) console.log('Unregistered stale service worker');
+                  });
+                }
+              });
+            }
+          `}
+        </Script>
         {children}
       </body>
     </html>

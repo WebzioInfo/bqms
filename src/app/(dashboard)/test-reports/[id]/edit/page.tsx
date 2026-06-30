@@ -2,35 +2,36 @@ import { ReportForm } from "../../components/report-form";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { getTestReportById, getWaterTestParameters, getRecentReportsWithResults } from "@/app/actions/report";
-import { getOrganizations } from "@/app/actions/organization";
+import { getTestReportById } from "@/app/actions/report";
 import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export default async function EditTestReportPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [reportResult, orgResult, session] = await Promise.all([
+  const [reportResult, session] = await Promise.all([
     getTestReportById(id),
-    getOrganizations(),
     getServerSession(authOptions)
   ]);
 
   if (!reportResult.success || !reportResult.data) {
-    notFound();
+    if (reportResult.error === "Not found") {
+      notFound();
+    }
+    return (
+      <div className="flex items-center justify-center h-[50vh]">
+        <div className="text-center space-y-4">
+          <h2 className="text-2xl font-bold text-red-600">Failed to load report for editing</h2>
+          <p className="text-slate-600 max-w-md mx-auto">{reportResult.error}</p>
+          <Link href="/test-reports">
+            <Button variant="outline" className="mt-4">Back to Reports</Button>
+          </Link>
+        </div>
+      </div>
+    );
   }
 
-  const organizations = orgResult.success ? orgResult.data : [];
-  const currentUserId = (session?.user as any)?.id || "unknown";
-  const userOrgId = (session?.user as any)?.organizationId || (organizations[0]?.id || "");
-
-  const [paramResult, recentResult] = await Promise.all([
-    getWaterTestParameters(),
-    userOrgId ? getRecentReportsWithResults(userOrgId) : Promise.resolve({ success: true, data: [] })
-  ]);
-
-  const parameters = paramResult.success ? paramResult.data : [];
-  const recentReports = recentResult.success ? recentResult.data : [];
+  const userOrgId = reportResult.data.organizationId;
 
   return (
     <div className="space-y-6 max-w-[1600px] w-full mx-auto px-4 animate-in fade-in duration-500">
@@ -48,10 +49,7 @@ export default async function EditTestReportPage({ params }: { params: Promise<{
 
       <ReportForm 
         initialData={reportResult.data} 
-        organizations={organizations || []} 
-        currentUserId={currentUserId}
-        parameters={parameters || []}
-        recentReports={recentReports || []}
+        organizationId={userOrgId}
       />
     </div>
   );
