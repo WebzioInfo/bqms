@@ -32,7 +32,24 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${outfit.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then((registrations) => {
+                  for (const registration of registrations) {
+                    registration.unregister().then((success) => {
+                      if (success) console.log('Unregistered stale service worker');
+                    });
+                  }
+                });
+              }
+            `
+          }}
+        />
+        {children}
+      </body>
     </html>
   );
 }
