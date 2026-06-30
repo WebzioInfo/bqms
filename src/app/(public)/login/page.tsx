@@ -34,7 +34,11 @@ function LoginForm() {
     });
 
     if (res?.error) {
-      setError(res.error);
+      if (res.error === "CredentialsSignin") {
+        setError("Invalid email or password.");
+      } else {
+        setError(res.error);
+      }
       setLoading(false);
     } else {
       router.push(callbackUrl);

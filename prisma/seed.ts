@@ -71,8 +71,21 @@ async function main() {
   console.log("Creating 100 Users...");
   const users = [];
   const roles = ['SUPER_ADMIN', 'QC_USER', 'QC_USER', 'LAB_STAFF', 'INSPECTOR', 'QC_USER'];
+  
+  // Explicitly create admin@biofix.com first
+  const adminUser = await prisma.user.create({
+    data: {
+      email: "admin@biofix.com",
+      name: "System Admin",
+      passwordHash,
+      role: "SUPER_ADMIN",
+      organizationId: orgs[0].id
+    }
+  });
+  users.push(adminUser);
+
   for (const org of orgs) {
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 19; i++) {
       users.push(await prisma.user.create({
         data: {
           email: faker.internet.email(),

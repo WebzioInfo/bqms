@@ -23,7 +23,9 @@ export const authOptions: import("next-auth").NextAuthOptions = {
           where: { email: credentials.email as string }
         });
 
-        if (!user) return null;
+        if (!user) {
+          throw new Error("Invalid email or password.");
+        }
 
         // Check if account is locked
         if (user.lockedUntil && user.lockedUntil > new Date()) {
@@ -73,14 +75,14 @@ export const authOptions: import("next-auth").NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = (user as any).role;
+        token.role = user.role;
       }
       return token;
     },
     async session({ session, token }) {
-      if (token) {
-        (session as any).user.id = token.id as string;
-        ((session as any).user as any).role = token.role;
+      if (token && session.user) {
+        session.user.id = token.id as string;
+        session.user.role = token.role as string;
       }
       return session;
     }
@@ -89,4 +91,12 @@ export const authOptions: import("next-auth").NextAuthOptions = {
 
 const handler = NextAuth(authOptions);
 
-export { handler as GET, handler as POST };
+export async function GET(req: Request, props: { params: Promise<any> }) {
+  const { params } = props;
+  return handler(req, { params: await params });
+}
+
+export async function POST(req: Request, props: { params: Promise<any> }) {
+  const { params } = props;
+  return handler(req, { params: await params });
+}
