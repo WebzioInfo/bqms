@@ -2,7 +2,7 @@ import { ReportForm } from "../../components/report-form";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { getTestReportById } from "@/app/actions/report";
+import { getTestReportById, getWaterTestParameters, getRecentReportsWithResults } from "@/app/actions/report";
 import { getOrganizations } from "@/app/actions/organization";
 import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
@@ -22,12 +22,21 @@ export default async function EditTestReportPage({ params }: { params: Promise<{
 
   const organizations = orgResult.success ? orgResult.data : [];
   const currentUserId = (session?.user as any)?.id || "unknown";
+  const userOrgId = (session?.user as any)?.organizationId || (organizations[0]?.id || "");
+
+  const [paramResult, recentResult] = await Promise.all([
+    getWaterTestParameters(),
+    userOrgId ? getRecentReportsWithResults(userOrgId) : Promise.resolve({ success: true, data: [] })
+  ]);
+
+  const parameters = paramResult.success ? paramResult.data : [];
+  const recentReports = recentResult.success ? recentResult.data : [];
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto animate-in fade-in duration-500">
+    <div className="space-y-6 max-w-[1600px] w-full mx-auto px-4 animate-in fade-in duration-500">
       <div className="flex items-center gap-4">
         <Link href={`/test-reports/${id}`}>
-          <Button variant="ghost" size="icon" className="rounded-full">
+          <Button variant="ghost" size="icon" className="rounded-full border shadow-sm">
             <ArrowLeft className="h-5 w-5" />
           </Button>
         </Link>
@@ -37,7 +46,13 @@ export default async function EditTestReportPage({ params }: { params: Promise<{
         </div>
       </div>
 
-      <ReportForm initialData={reportResult.data} organizations={organizations || []} currentUserId={currentUserId} />
+      <ReportForm 
+        initialData={reportResult.data} 
+        organizations={organizations || []} 
+        currentUserId={currentUserId}
+        parameters={parameters || []}
+        recentReports={recentReports || []}
+      />
     </div>
   );
 }
