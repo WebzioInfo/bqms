@@ -8,6 +8,7 @@ import bcrypt from "bcryptjs";
 
 
 export const authOptions: import("next-auth").NextAuthOptions = {
+  useSecureCookies: process.env.VERCEL === "1" || process.env.NODE_ENV === "production",
   adapter: PrismaAdapter(prisma) as import("next-auth/adapters").Adapter,
   providers: [
     CredentialsProvider({
