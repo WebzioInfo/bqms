@@ -34,10 +34,11 @@ function LoginForm() {
     });
 
     if (res?.error) {
-      if (res.error === "CredentialsSignin") {
+      if (res.error === "CredentialsSignin" || res.error === "Invalid email or password.") {
         setError("Invalid email or password.");
       } else {
-        setError(res.error);
+        console.error("Login Error:", res.error);
+        setError("An unexpected error occurred during sign in. Please try again.");
       }
       setLoading(false);
     } else {
