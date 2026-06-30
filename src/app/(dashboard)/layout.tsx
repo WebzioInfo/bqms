@@ -18,9 +18,17 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  console.log("[TRACE Layout] Fetching getServerSession in DashboardLayout...");
   const session = await getServerSession(authOptions);
+  console.log("[TRACE Layout] getServerSession returned:", session ? {
+    id: session.user?.id,
+    email: session.user?.email,
+    role: (session as any).user?.role,
+    orgId: (session as any).user?.organizationId
+  } : "null");
   
   if (!session) {
+    console.log("[TRACE Layout] No session found. Redirecting to /login");
     redirect("/login");
   }
 

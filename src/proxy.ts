@@ -23,12 +23,22 @@ export default withAuth(
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
 
+    console.log("[TRACE proxy] Incoming Request:", {
+      path,
+      hasToken: !!token,
+      role: token?.role,
+      host: req.headers.get("host"),
+      forwardedProto: req.headers.get("x-forwarded-proto"),
+      cookies: req.headers.get("cookie") ? "present" : "missing"
+    });
+
     // Check if it is a static or excluded route
     if (
       STATIC_ROUTES.some(r => path.startsWith(r)) ||
       EXCLUDED_API_ROUTES.some(r => path.startsWith(r)) ||
       path.match(/\.(.*)$/) // Exclude files with extensions like .png, .js, .svg
     ) {
+      console.log("[TRACE proxy] Bypassing static/excluded route:", path);
       return NextResponse.next();
     }
 
@@ -36,6 +46,7 @@ export default withAuth(
 
     // If NO session and accessing a protected route -> Redirect to /login
     if (!token && !isPublicRoute) {
+      console.log("[TRACE proxy] No session & protected route. Redirecting to /login");
       return NextResponse.redirect(new URL("/login", req.url));
     }
 
@@ -55,16 +66,17 @@ export default withAuth(
           break;
       }
       
-      // If they are on `/login` and have a token, redirect.
-      // Or if they try to access a public page while authenticated.
+      console.log("[TRACE proxy] Session exists & public route. Redirecting to:", redirectPath);
       return NextResponse.redirect(new URL(redirectPath, req.url));
     }
 
     // If NO session and on `/` -> Redirect to /login
     if (!token && path === "/") {
+      console.log("[TRACE proxy] No session & root path. Redirecting to /login");
       return NextResponse.redirect(new URL("/login", req.url));
     }
 
+    console.log("[TRACE proxy] Allowing request to proceed:", path);
     return NextResponse.next();
   },
   {

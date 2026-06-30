@@ -25,6 +25,7 @@ function LoginForm() {
     setLoading(true);
     setError("");
 
+    console.log("[TRACE Login] handleSubmit invoked. Submitting credentials...");
     const res = await signIn("credentials", {
       redirect: false,
       email,
@@ -32,6 +33,8 @@ function LoginForm() {
       rememberMe,
       callbackUrl
     });
+
+    console.log("[TRACE Login] signIn promise resolved with:", res);
 
     if (res?.error) {
       if (res.error === "CredentialsSignin" || res.error === "Invalid email or password.") {
@@ -42,6 +45,7 @@ function LoginForm() {
       }
       setLoading(false);
     } else {
+      console.log("[TRACE Login] Redirecting using router.push to:", callbackUrl);
       router.push(callbackUrl);
     }
   };
