@@ -21,23 +21,11 @@ type RecentDashboardReport = {
 };
 
 export default async function DashboardPage() {
-  console.log("[TRACE Page] Fetching getServerSession in DashboardPage...");
   const session = await getServerSession(authOptions);
-  console.log("[TRACE Page] getServerSession returned:", session ? {
-    email: session.user?.email,
-    role: (session as any).user?.role
-  } : "null");
-
-  if (!session) {
-    console.log("[TRACE Page] No session found. Redirecting to /login");
-    redirect("/login");
-  }
+  if (!session) redirect("/login");
 
   const role = (session as SessionWithRole).user?.role;
-  
-  console.log("[TRACE Page] Fetching metrics from getDashboardMetrics...");
   const { data: metrics } = await getDashboardMetrics();
-  console.log("[TRACE Page] getDashboardMetrics returned:", metrics ? "data present" : "null");
 
   return (
     <div className="flex-1 space-y-4">
