@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
 
@@ -15,6 +15,11 @@ const outfit = Outfit({
 export const metadata: Metadata = {
   title: "BQMS | Biofix Quality Management System",
   description: "Water Quality Transparency, Verification, Compliance and Public Trust Platform",
+  manifest: "/manifest.json",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0f172a",
 };
 
 export default function RootLayout({

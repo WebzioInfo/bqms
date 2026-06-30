@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { ShieldCheck, LogOut, Settings, LayoutDashboard, Database, QrCode, Users, Award, LineChart, RefreshCw, Code, ClipboardList, ClipboardCheck, Package, FileText, Beaker } from "lucide-react";
+import { ShieldCheck, Settings, LayoutDashboard, Database, Users, Award, LineChart, Code, ClipboardList, Beaker, type LucideIcon } from "lucide-react";
 
-const ROLE_NAVIGATION: Record<string, { group: string; items: { name: string; href: string; icon: any }[] }[]> = {
-  SUPER_ADMIN: [
+const ROLE_NAVIGATION: Record<string, { group: string; items: { name: string; href: string; icon: LucideIcon }[] }[]> = {
+  PLATFORM_ADMIN: [
     {
       group: "Core Dashboard",
       items: [
@@ -18,84 +18,58 @@ const ROLE_NAVIGATION: Record<string, { group: string; items: { name: string; hr
     {
       group: "Compliance & Data",
       items: [
-        { name: "Certificates", href: "/certificates", icon: Award },
-        { name: "Water Tests", href: "/water-test-reports", icon: Beaker },
-        { name: "QR Management", href: "/qr-codes", icon: QrCode },
         { name: "Reports & Analytics", href: "/reports", icon: LineChart },
       ]
     },
     {
       group: "System Tools",
       items: [
-        { name: "ERP Sync", href: "/erp-sync", icon: RefreshCw },
+        { name: "API Products", href: "/api-products", icon: Code },
         { name: "API Marketplace", href: "/api-marketplace", icon: Code },
-        { name: "Webhooks", href: "/webhooks", icon: ClipboardCheck },
-        { name: "Audit Logs", href: "/audit-logs", icon: ClipboardList },
+        { name: "Compliance", href: "/compliance", icon: ShieldCheck },
+        { name: "Audit Logs", href: "/audit", icon: ClipboardList },
         { name: "Settings", href: "/settings", icon: Settings },
       ]
     }
   ],
-  BIOFIX_ADMIN: [
+  COMPANY_ADMIN: [
     {
       group: "Core Dashboard",
       items: [
         { name: "Overview", href: "/", icon: LayoutDashboard },
-        { name: "Organizations", href: "/organizations", icon: Database },
+        { name: "Users", href: "/users", icon: Users },
       ]
     },
     {
-      group: "Compliance",
+      group: "Production & Quality",
       items: [
-        { name: "Inspections", href: "/inspections", icon: ClipboardCheck },
-        { name: "Water Tests", href: "/water-test-reports", icon: Beaker },
+        { name: "Water Tests", href: "/test-reports", icon: Beaker },
+        { name: "Certificates", href: "/certificates", icon: Award },
+        { name: "Customers", href: "/customers", icon: Users },
+        { name: "API Marketplace", href: "/api-marketplace", icon: Code },
+        { name: "Compliance", href: "/compliance", icon: ShieldCheck },
         { name: "Reports & Analytics", href: "/reports", icon: LineChart },
-        { name: "QR Management", href: "/qr-codes", icon: QrCode },
+      ]
+    },
+    {
+      group: "Settings",
+      items: [
+        { name: "Settings", href: "/settings", icon: Settings },
       ]
     }
   ],
-  INSPECTOR: [
+  QC: [
     {
       group: "Core Dashboard",
       items: [
         { name: "Overview", href: "/", icon: LayoutDashboard },
-        { name: "Inspections", href: "/inspections", icon: ClipboardCheck },
-        { name: "Organizations", href: "/organizations", icon: Database },
-      ]
-    }
-  ],
-  QC_USER: [
-    {
-      group: "Core Dashboard",
-      items: [
-        { name: "Overview", href: "/", icon: LayoutDashboard },
-        { name: "Batches", href: "/batches", icon: Package },
       ]
     },
     {
       group: "Quality Control",
       items: [
-        { name: "Water Tests", href: "/water-test-reports", icon: Beaker },
-        { name: "Laboratory Reports", href: "/laboratory-reports", icon: FileText },
-        { name: "Certificates", href: "/certificates", icon: Award },
-      ]
-    }
-  ],
-  LAB_STAFF: [
-    {
-      group: "Core Dashboard",
-      items: [
-        { name: "Overview", href: "/", icon: LayoutDashboard },
-        { name: "Batches", href: "/batches", icon: Package },
-        { name: "Water Tests", href: "/water-test-reports", icon: Beaker },
-        { name: "Laboratory Reports", href: "/laboratory-reports", icon: FileText },
-      ]
-    }
-  ],
-  API_CLIENT: [
-    {
-      group: "Core Dashboard",
-      items: [
-        { name: "Overview", href: "/", icon: LayoutDashboard },
+        { name: "Water Tests", href: "/test-reports", icon: Beaker },
+        { name: "Compliance", href: "/compliance", icon: ShieldCheck },
       ]
     }
   ]
@@ -103,7 +77,7 @@ const ROLE_NAVIGATION: Record<string, { group: string; items: { name: string; hr
 
 export function SidebarNav({ role }: { role: string }) {
   const pathname = usePathname();
-  const groups = ROLE_NAVIGATION[role] || ROLE_NAVIGATION.QC_USER;
+  const groups = ROLE_NAVIGATION[role] || ROLE_NAVIGATION.QC;
 
   return (
     <nav className="flex flex-col gap-6 px-3 py-4 overflow-y-auto">

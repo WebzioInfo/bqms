@@ -1,112 +1,50 @@
+import { getOrganizationById } from "@/app/actions/organization";
 import { notFound } from "next/navigation";
-import prisma from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { OrganizationDetailClient } from "./client";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { ArrowLeft, Edit } from "lucide-react";
+import prisma from "@/lib/prisma";
 
 export default async function OrganizationDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = await params;
-  const session = await getServerSession(authOptions);
-  // @ts-ignore
-  const userRole = session?.user?.role;
-  // @ts-ignore
-  const orgId = session?.user?.organizationId;
-
-  // Enforce access control if not an admin
-  if (userRole !== "SUPER_ADMIN" && userRole !== "BIOFIX_ADMIN") {
-    if (orgId !== resolvedParams.id) {
-      notFound();
-    }
-  }
-
-  const organization = await prisma.organization.findUnique({
-    where: { id: resolvedParams.id },
-    include: {
-      users: true,
-      batches: {
-        orderBy: { createdAt: "desc" }
-      },
-      inspections: {
-        include: { inspector: true },
-        orderBy: { inspectionDate: "desc" }
-      },
-      qrCodes: {
-        include: { 
-          _count: { select: { scans: true } },
-          scans: {
-            orderBy: { scannedAt: "desc" }
-          }
-        },
-        orderBy: { createdAt: "desc" }
-      },
-      certificates: {
-        include: { batch: true },
-        orderBy: { issueDate: "desc" }
-      },
-      trustScoreHistory: {
-        orderBy: { recordedAt: "asc" }
-      },
-      waterTestParams: {
-        orderBy: [{ type: "asc" }, { name: "asc" }]
-      }
-    }
-  });
-
-  if (!organization) {
+  const { id } = await params;
+  const result = await getOrganizationById(id);
+  
+  if (!result.success || !result.data) {
     notFound();
   }
 
-  // We also need laboratory reports across all batches of this organization
-  const labReports = await prisma.laboratoryReport.findMany({
-    where: {
-      batch: {
-        organizationId: organization.id
-      }
-    },
-    include: {
-      batch: true,
-      parameters: true
-    },
-    orderBy: { testDate: "desc" }
-  });
-
-  // Fetch recent audit logs for this organization (simulated or real depending on schema)
-  const auditLogs = await prisma.auditLog.findMany({
-    where: {
-      entityId: organization.id
-    },
-    include: { user: true },
-    orderBy: { createdAt: "desc" },
-    take: 50
-  });
-
-  // Pre-calculate aggregate metrics to pass to client
-  const totalInspections = organization.inspections.length;
-  const passedInspections = organization.inspections.filter(i => i.complianceStatus === "PASS").length;
-  const totalLabReports = labReports.length;
-  const passedLabReports = labReports.filter(r => r.isCompliant).length;
-  
-  const totalTests = totalInspections + totalLabReports;
-  const passedTests = passedInspections + passedLabReports;
-  const complianceScore = totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0;
-  const openIssues = (totalInspections - passedInspections) + (totalLabReports - passedLabReports);
-
-  const totalQrScans = organization.qrCodes.reduce((sum, qr) => sum + (qr._count?.scans || 0), 0);
-  const activeCertificates = organization.certificates.filter(c => c.status === "ACTIVE").length;
+  // Get related stats
+  const usersCount = await prisma.user.count({ where: { organizationId: id } });
+  const certificatesCount = await prisma.certificate.count({ where: { organizationId: id } });
+  const ncrCount = await prisma.nonConformanceRecord.count({ where: { organizationId: id, status: { not: "CLOSED" } } });
 
   return (
-    <OrganizationDetailClient 
-      organization={organization} 
-      labReports={labReports}
-      auditLogs={auditLogs}
-      metrics={{
-        totalInspections,
-        activeCertificates,
-        totalQrScans,
-        totalLabReports,
-        complianceScore,
-        openIssues
-      }}
-    />
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Link href="/organizations">
+            <Button variant="ghost" size="icon" className="rounded-full shrink-0">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">{result.data.name}</h1>
+            <p className="text-muted-foreground mt-1 text-sm">Organization Details & Settings</p>
+          </div>
+        </div>
+        
+        <Link href={`/organizations/${id}/edit`}>
+          <Button variant="outline" className="shadow-sm">
+            <Edit className="mr-2 h-4 w-4" /> Edit Details
+          </Button>
+        </Link>
+      </div>
+
+      <OrganizationDetailClient 
+        organization={result.data} 
+        stats={{ usersCount, certificatesCount, ncrCount }} 
+      />
+    </div>
   );
 }
