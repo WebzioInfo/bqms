@@ -15,6 +15,7 @@ export interface ResultValue {
   value: string;
   stringValue: string;
   isPass: boolean;
+  qualityStatus?: string;
 }
 
 export interface ParameterDef {

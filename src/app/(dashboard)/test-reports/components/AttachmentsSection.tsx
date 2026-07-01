@@ -6,9 +6,10 @@ import { UploadCloud, File, X } from "lucide-react";
 interface Props {
   data: ReportFormData;
   updateData: (updates: Partial<ReportFormData>) => void;
+  disabled?: boolean;
 }
 
-export function AttachmentsSection({ data, updateData }: Props) {
+export function AttachmentsSection({ data, updateData, disabled = false }: Props) {
   // Placeholder for actual file upload logic. 
   // We just allow adding a dummy file string to demonstrate UI for now.
   const handleAddDummyFile = () => {
@@ -31,7 +32,7 @@ export function AttachmentsSection({ data, updateData }: Props) {
       </div>
 
       <div className="space-y-4">
-        {data.attachments.length > 0 && (
+        {data.attachments.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
             {data.attachments.map((file, idx) => (
               <div key={idx} className="flex items-center justify-between p-3 border border-slate-200 rounded-lg bg-slate-50">
@@ -41,27 +42,37 @@ export function AttachmentsSection({ data, updateData }: Props) {
                   </div>
                   <span className="text-sm text-slate-700 truncate font-medium">{file}</span>
                 </div>
-                <button 
-                  onClick={() => removeFile(idx)}
-                  className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-md transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                {!disabled && (
+                  <button 
+                    onClick={() => removeFile(idx)}
+                    className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-md transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             ))}
           </div>
+        ) : (
+          disabled && (
+            <div className="text-center p-6 border border-dashed border-slate-200 rounded-xl bg-slate-50/50 text-slate-400 text-sm">
+              No attachments uploaded.
+            </div>
+          )
         )}
 
-        <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-slate-50 transition-colors cursor-pointer" onClick={handleAddDummyFile}>
-          <div className="mx-auto w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-3">
-            <UploadCloud className="w-6 h-6" />
+        {!disabled && (
+          <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-slate-50 transition-colors cursor-pointer" onClick={handleAddDummyFile}>
+            <div className="mx-auto w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-3">
+              <UploadCloud className="w-6 h-6" />
+            </div>
+            <h3 className="text-sm font-semibold text-slate-800 mb-1">Click to upload or drag and drop</h3>
+            <p className="text-xs text-slate-500">SVG, PNG, JPG, or PDF (max. 10MB)</p>
+            <Button variant="outline" size="sm" className="mt-4" onClick={(e) => { e.stopPropagation(); handleAddDummyFile(); }}>
+              Select Files
+            </Button>
           </div>
-          <h3 className="text-sm font-semibold text-slate-800 mb-1">Click to upload or drag and drop</h3>
-          <p className="text-xs text-slate-500">SVG, PNG, JPG, or PDF (max. 10MB)</p>
-          <Button variant="outline" size="sm" className="mt-4" onClick={(e) => { e.stopPropagation(); handleAddDummyFile(); }}>
-            Select Files
-          </Button>
-        </div>
+        )}
       </div>
     </div>
   );

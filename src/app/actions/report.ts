@@ -11,9 +11,20 @@ import {
   resolveWritableOrganizationId,
   scopedOrganizationWhere,
 } from "@/lib/auth/tenant-access";
+import { evaluate, evaluateParameterResult } from "@/lib/quality/evaluation-service";
 
 const REPORT_STATUSES = Object.values(WaterTestStatus);
 const LIST_PAGE_SIZE = 100;
+
+const INCUBATION_HOURS: Record<string, number> = {
+  "E.coli": 24,
+  "Coliform": 24,
+  "Pseudomonas": 48,
+  "Clostridia": 48,
+  "Aerobic Microbial Count 37°C": 24,
+  "Aerobic Microbial Count 22°C": 72,
+  "Yeast & Mold": 120, // 5 days
+};
 
 function parseReportStatus(
   status: unknown,
@@ -41,7 +52,8 @@ export async function getTestReports() {
           include: {
             parameter: true
           }
-        }
+        },
+        pendingTests: true,
       },
       orderBy: { sampleTime: 'desc' },
       take: LIST_PAGE_SIZE,
@@ -71,7 +83,8 @@ export async function getTestReportById(id: string) {
       include: { 
         results: {
           include: { parameter: true }
-        }
+        },
+        pendingTests: true,
       }
     });
     if (!report) {
@@ -268,7 +281,8 @@ export async function getRecentReportsWithResults(organizationId: string) {
           include: {
             parameter: true
           }
-        }
+        },
+        pendingTests: true,
       },
       orderBy: { sampleTime: 'desc' },
       take: 10,
@@ -313,14 +327,44 @@ export async function createTestReportWithResults(data: any, results: any[], use
         if (!dbParam) {
           throw new Error(`Parameter not found: ${res.parameterId}`);
         }
+        const val = res.value !== null && res.value !== undefined && res.value !== "" ? parseFloat(res.value) : null;
+        const strVal = res.stringValue || null;
+        const qualityStatus = evaluateParameterResult(dbParam.name, val, strVal);
+
         return tx.waterTestResult.create({
           data: {
             reportId: newReport.id,
             parameterId: dbParam.id,
-            value: res.value !== null && res.value !== undefined ? parseFloat(res.value) : null,
-            stringValue: res.stringValue || null,
-            isPass: res.isPass,
+            value: val,
+            stringValue: strVal,
+            qualityStatus,
+            isPass: qualityStatus === "PASS",
             createdBy: user.id || userId,
+          }
+        });
+      }));
+
+      // Create PendingLabTest entries
+      const reportCreatedAt = newReport.createdAt || new Date();
+      await Promise.all(Object.entries(INCUBATION_HOURS).map(async ([paramName, hours]) => {
+        // Find if this parameter was submitted in results
+        const res = results.find(r => r.parameterId === paramName);
+        const hasResult = res && (
+          res.stringValue !== "" && res.stringValue !== null && res.stringValue !== undefined && res.stringValue !== "Not Entered" ||
+          res.value !== "" && res.value !== null && res.value !== undefined
+        );
+
+        const dueAt = new Date(reportCreatedAt.getTime() + hours * 60 * 60 * 1000);
+        
+        await tx.pendingLabTest.create({
+          data: {
+            reportId: newReport.id,
+            parameterName: paramName,
+            status: hasResult ? "COMPLETED" : "WAITING",
+            dueAt,
+            completedAt: hasResult ? reportCreatedAt : null,
+            completedBy: hasResult ? (user.name || user.email || "QC Tech") : null,
+            completionNotes: hasResult ? "Result entered during report creation." : null
           }
         });
       }));
@@ -389,6 +433,10 @@ export async function updateTestReportWithResults(id: string, data: any, results
         if (!dbParam) {
           throw new Error(`Parameter not found: ${res.parameterId}`);
         }
+        const val = res.value !== null && res.value !== undefined && res.value !== "" ? parseFloat(res.value) : null;
+        const strVal = res.stringValue || null;
+        const qualityStatus = evaluateParameterResult(dbParam.name, val, strVal);
+
         return tx.waterTestResult.upsert({
           where: {
             reportId_parameterId: {
@@ -397,25 +445,100 @@ export async function updateTestReportWithResults(id: string, data: any, results
             }
           },
           update: {
-            value: res.value !== null && res.value !== undefined ? parseFloat(res.value) : null,
-            stringValue: res.stringValue || null,
-            isPass: res.isPass,
+            value: val,
+            stringValue: strVal,
+            qualityStatus,
+            isPass: qualityStatus === "PASS",
             updatedBy: user.id || userId,
           },
           create: {
             reportId: id,
             parameterId: dbParam.id,
-            value: res.value !== null && res.value !== undefined ? parseFloat(res.value) : null,
-            stringValue: res.stringValue || null,
-            isPass: res.isPass,
+            value: val,
+            stringValue: strVal,
+            qualityStatus,
+            isPass: qualityStatus === "PASS",
             createdBy: user.id || userId,
           }
         });
       }));
 
+      // Update PendingLabTest entries
+      const reportCreatedAt = currentReport.createdAt || new Date();
+      await Promise.all(Object.entries(INCUBATION_HOURS).map(async ([paramName, hours]) => {
+        const res = results.find(r => r.parameterId === paramName);
+        const hasResult = res && (
+          res.stringValue !== "" && res.stringValue !== null && res.stringValue !== undefined && res.stringValue !== "Not Entered" ||
+          res.value !== "" && res.value !== null && res.value !== undefined
+        );
+
+        const dueAt = new Date(reportCreatedAt.getTime() + hours * 60 * 60 * 1000);
+
+        // Find existing pending test
+        const existing = await tx.pendingLabTest.findUnique({
+          where: {
+            reportId_parameterName: {
+              reportId: id,
+              parameterName: paramName
+            }
+          }
+        });
+
+        if (existing) {
+          // If status is not COMPLETED, and we now have a result -> complete it!
+          if (existing.status !== "COMPLETED" && hasResult) {
+            await tx.pendingLabTest.update({
+              where: { id: existing.id },
+              data: {
+                status: "COMPLETED",
+                completedAt: new Date(),
+                completedBy: user.name || user.email || "QC Tech",
+                completionNotes: "Result entered during report update."
+              }
+            });
+            // Clear any active notification for this parameter on this report
+            await tx.notification.deleteMany({
+              where: {
+                reportId: id,
+                parameterName: paramName
+              }
+            });
+          } else if (existing.status === "COMPLETED" && !hasResult) {
+            // If they somehow cleared it, revert to WAITING/OVERDUE
+            const now = new Date();
+            const status = now >= dueAt ? "OVERDUE" : "WAITING";
+            await tx.pendingLabTest.update({
+              where: { id: existing.id },
+              data: {
+                status,
+                completedAt: null,
+                completedBy: null,
+                completionNotes: null
+              }
+            });
+          }
+        } else {
+          // Create it if missing (self-healing)
+          await tx.pendingLabTest.create({
+            data: {
+              reportId: id,
+              parameterName: paramName,
+              status: hasResult ? "COMPLETED" : "WAITING",
+              dueAt,
+              completedAt: hasResult ? new Date() : null,
+              completedBy: hasResult ? (user.name || user.email || "QC Tech") : null,
+              completionNotes: hasResult ? "Result entered during report update." : null
+            }
+          });
+        }
+      }));
+
       return tx.waterTestReport.findUnique({
         where: { id },
-        include: { results: { include: { parameter: true } } }
+        include: { 
+          results: { include: { parameter: true } },
+          pendingTests: true
+        }
       });
     }, {
       maxWait: 5000,
@@ -425,6 +548,27 @@ export async function updateTestReportWithResults(id: string, data: any, results
     revalidatePath("/test-reports");
     revalidatePath(`/test-reports/${id}`);
     return { success: true, data: report };
+  } catch (error) {
+    return { success: false, error: errorMessage(error) };
+  }
+}
+
+export async function evaluateResultsAction(
+  results: { parameterId: string; value: string; stringValue: string }[]
+) {
+  try {
+    const resultStatuses: Record<string, "PASS" | "WARNING" | "FAIL" | "PENDING"> = {};
+    for (const res of results) {
+      const hasVal = res.value !== undefined && res.value !== null && res.value !== "";
+      const hasStr = res.stringValue !== undefined && res.stringValue !== null && res.stringValue !== "";
+      if (!hasVal && !hasStr) {
+        resultStatuses[res.parameterId] = "PENDING";
+        continue;
+      }
+      const status = evaluate(res.parameterId, res.stringValue || res.value);
+      resultStatuses[res.parameterId] = status;
+    }
+    return { success: true, data: resultStatuses };
   } catch (error) {
     return { success: false, error: errorMessage(error) };
   }

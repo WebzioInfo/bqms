@@ -8,24 +8,12 @@ interface Props {
   parameters: ParameterDef[];
   data: ReportFormData;
   updateResult: (parameterId: string, value: string, stringValue?: string) => void;
+  disabled?: boolean;
+  evaluatedStatuses: Record<string, "PASS" | "WARNING" | "FAIL" | "PENDING">;
 }
 
-export function MicrobiologyTable({ parameters, data, updateResult }: Props) {
+export function MicrobiologyTable({ parameters, data, updateResult, disabled = false, evaluatedStatuses }: Props) {
   const microParams = parameters.filter((p) => p.category === "MICROBIOLOGY");
-
-  const calculateStatus = (param: ParameterDef, valueStr: string, stringValue: string): "PASS" | "FAIL" | "PENDING" => {
-    if (stringValue === "Absent") return "PASS";
-    if (stringValue === "Present") return "FAIL";
-
-    if (!valueStr || valueStr.trim() === "") return "PENDING";
-    const num = parseFloat(valueStr);
-    if (isNaN(num)) return "PENDING";
-
-    const min = param.minAcceptable ?? -Infinity;
-    const max = param.maxAcceptable ?? Infinity;
-
-    return (num >= min && num <= max) ? "PASS" : "FAIL";
-  };
 
   const getStandardString = (param: ParameterDef) => {
     if (param.maxAcceptable === 0) return "Absent";
@@ -56,11 +44,10 @@ export function MicrobiologyTable({ parameters, data, updateResult }: Props) {
           <tbody className="divide-y divide-slate-100">
             {microParams.map((param) => {
               const result = data.results[param.id] || { value: "", stringValue: "" };
-              const status = calculateStatus(param, result.value, result.stringValue);
-
+              
               // Determine if this is typically a Present/Absent or Numeric parameter
-              // Most microbiology is Absent except counts like AMC 22/37 which are numeric
               const isNumericTarget = param.name.includes("Count");
+              const status = (evaluatedStatuses && evaluatedStatuses[param.id]) || "PENDING";
 
               return (
                 <tr key={param.id} className="hover:bg-slate-50/50 transition-colors">
@@ -68,21 +55,23 @@ export function MicrobiologyTable({ parameters, data, updateResult }: Props) {
                   <td className="px-6 py-3">
                     {isNumericTarget ? (
                       <Input
-                        type="number"
+                        type={disabled ? "text" : "number"}
                         step="1"
                         placeholder="0"
-                        value={result.value}
+                        value={result.value !== "" && result.value !== null && result.value !== undefined ? result.value : (disabled ? "Not Entered" : "")}
                         onChange={(e) => updateResult(param.id, e.target.value, "")}
                         className="w-full max-w-[150px] focus:ring-blue-500 h-9"
+                        disabled={disabled}
                       />
                     ) : (
                       <Select
-                        value={result.stringValue || (result.value === "0" ? "Absent" : "")}
+                        value={result.stringValue || (result.value === "0" ? "Absent" : result.value === "1" ? "Present" : "") || (disabled ? "Not Entered" : "")}
                         onValueChange={(val) => {
                           if (val === "Absent") updateResult(param.id, "0", "Absent");
                           else if (val === "Present") updateResult(param.id, "1", "Present");
-                          else updateResult(param.id, "", val);
+                          else updateResult(param.id, "", val || undefined);
                         }}
+                        disabled={disabled}
                       >
                         <SelectTrigger className="w-full max-w-[150px] focus:ring-blue-500 h-9 bg-white">
                           <SelectValue placeholder="Select..." />
@@ -90,6 +79,7 @@ export function MicrobiologyTable({ parameters, data, updateResult }: Props) {
                         <SelectContent>
                           <SelectItem value="Absent">Absent</SelectItem>
                           <SelectItem value="Present">Present</SelectItem>
+                          {disabled && <SelectItem value="Not Entered">Not Entered</SelectItem>}
                         </SelectContent>
                       </Select>
                     )}
@@ -100,6 +90,11 @@ export function MicrobiologyTable({ parameters, data, updateResult }: Props) {
                     {status === "PASS" && (
                       <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 w-full justify-center py-1">
                         <CheckCircle2 className="w-3 h-3 mr-1" /> Pass
+                      </Badge>
+                    )}
+                    {status === "WARNING" && (
+                      <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 w-full justify-center py-1">
+                        <AlertCircle className="w-3 h-3 mr-1" /> Warning
                       </Badge>
                     )}
                     {status === "FAIL" && (

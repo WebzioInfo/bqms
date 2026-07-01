@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import prisma from "@/lib/prisma";
 import { ReportGeneratorService, ReportData } from "@/lib/reports";
 import { format } from "date-fns";
+import { STATIC_PARAMETERS } from "@/app/(dashboard)/test-reports/components/types";
 
 export async function GET(
   req: NextRequest,
@@ -25,7 +26,6 @@ export async function GET(
         results: {
           include: { parameter: true },
         },
-        organization: true,
       },
     });
 
@@ -33,55 +33,75 @@ export async function GET(
       return new NextResponse("Report not found", { status: 404 });
     }
 
+    const org = await prisma.organization.findUnique({
+      where: { id: report.organizationId },
+    });
+
     // Format metadata
     const metadata: Record<string, string> = {
-      "Report Number": report.reportNumber || report.id.substring(0, 8).toUpperCase(),
-      "Company": report.organization?.name || "N/A",
-      "Batch Number": report.batchNumber || "N/A",
-      "Production Date": report.productionDate ? format(new Date(report.productionDate), "dd MMM yyyy") : "N/A",
-      "Sample Time": report.sampleTime ? format(new Date(report.sampleTime), "dd MMM yyyy, hh:mm a") : "N/A",
-      "Report Type": report.reportType,
-      "Collected By": report.collectedBy || "N/A",
-      "Tested By": report.testedBy || "N/A",
-      "Verified By": report.verifiedBy || "N/A",
+      "Report Number": report.id.substring(0, 8).toUpperCase(),
+      "Company": org?.name || "N/A",
+      "Batch Number": report.batchNumber || "—",
+      "Production Date": report.productionDate ? format(new Date(report.productionDate), "dd MMM yyyy") : "—",
+      "Sample Time": report.sampleTime ? format(new Date(report.sampleTime), "dd MMM yyyy, hh:mm a") : "—",
+      "Report Type": report.reportType || "—",
+      "Collected By": report.collectedBy || "—",
+      "Tested By": report.testedBy || "—",
+      "Verified By": report.verifiedBy || "—",
       "Overall Status": report.status,
     };
 
-    if (report.remarks) {
-      metadata["Remarks"] = report.remarks;
+    if (report.remarks || report.remarks === "") {
+      metadata["Remarks"] = report.remarks || "—";
+    } else {
+      metadata["Remarks"] = "—";
     }
 
     // Format rows
     const headers = ["Parameter", "Category", "Result", "Unit", "Standard", "Status"];
-    const rows: string[][] = report.results.map((res: any) => {
-      const p = res.parameter;
-      if (!p) return [];
-
-      let standardStr = "—";
-      if (p.minAcceptable !== null && p.maxAcceptable !== null) {
-        standardStr = p.minAcceptable === p.maxAcceptable 
-          ? String(p.minAcceptable) 
-          : `${p.minAcceptable} - ${p.maxAcceptable}`;
-      } else if (p.minAcceptable !== null) {
-        standardStr = `>= ${p.minAcceptable}`;
-      } else if (p.maxAcceptable !== null) {
-        standardStr = `<= ${p.maxAcceptable}`;
+    const rows: string[][] = STATIC_PARAMETERS.map((param) => {
+      const res = report.results.find(
+        (r: any) => r.parameter?.name === param.name || r.parameterId === param.id
+      );
+      
+      let displayVal = "—";
+      let statusStr = "—";
+      
+      if (res) {
+        displayVal = res.stringValue || (res.value !== null && res.value !== undefined ? String(res.value) : "—");
+        statusStr = res.qualityStatus || (res.isPass ? "PASS" : "FAIL");
+      } else {
+        // Default display rules
+        if (param.category === "MICROBIOLOGY") {
+          displayVal = "Not Entered";
+        } else if (param.unit === "Descriptor" || param.id === "Odour" || param.id === "Taste") {
+          displayVal = "—";
+        } else {
+          displayVal = "0";
+        }
+        statusStr = "—";
       }
 
-      let statusStr = "PASS";
-      if (!res.isPass) {
-        statusStr = "FAIL";
+      let standardStr = "—";
+      if (param.minAcceptable !== null && param.maxAcceptable !== null) {
+        standardStr = param.minAcceptable === param.maxAcceptable 
+          ? String(param.minAcceptable) 
+          : `${param.minAcceptable} - ${param.maxAcceptable}`;
+      } else if (param.minAcceptable !== null) {
+        standardStr = `>= ${param.minAcceptable}`;
+      } else if (param.maxAcceptable !== null) {
+        standardStr = `<= ${param.maxAcceptable}`;
       }
 
       return [
-        p.name,
-        p.category,
-        res.stringValue || String(res.value || 0),
-        p.unit || "",
+        param.name,
+        param.category,
+        displayVal,
+        param.unit || "",
         standardStr,
         statusStr
       ];
-    }).filter((r: string[]) => r.length > 0);
+    });
 
     const reportData: ReportData = {
       title: "WATER QUALITY CONTROL TEST CERTIFICATE",
@@ -95,7 +115,9 @@ export async function GET(
     const contentType = formatType === "pdf" ? "application/pdf" : "application/octet-stream";
     const extension = formatType;
 
-    return new NextResponse(buffer, {
+    const responseBody = typeof buffer === "string" ? buffer : new Uint8Array(buffer);
+
+    return new NextResponse(responseBody, {
       status: 200,
       headers: {
         "Content-Type": contentType,

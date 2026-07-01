@@ -31,6 +31,41 @@ export async function getDashboardMetrics() {
       user.role === Role.QC ? Promise.resolve(0) : prisma.user.count(queryOptions),
       user.role === Role.PLATFORM_ADMIN ? prisma.organization.count() : Promise.resolve(0)
     ]);
+    
+    // Fetch all reports for the organization to compute Quality metrics
+    const reportsForQuality = await prisma.waterTestReport.findMany({
+      where: reportWhere,
+      include: {
+        results: {
+          select: {
+            qualityStatus: true,
+            isPass: true
+          }
+        }
+      }
+    });
+
+    let reportsPassed = 0;
+    let reportsWithWarnings = 0;
+    let reportsFailed = 0;
+
+    for (const rep of reportsForQuality) {
+      if (rep.results.length === 0) {
+        reportsPassed++;
+        continue;
+      }
+      const hasFail = rep.results.some(r => r.qualityStatus === "FAIL" || (!r.qualityStatus && r.isPass === false));
+      if (hasFail) {
+        reportsFailed++;
+      } else {
+        const hasWarning = rep.results.some(r => r.qualityStatus === "WARNING");
+        if (hasWarning) {
+          reportsWithWarnings++;
+        } else {
+          reportsPassed++;
+        }
+      }
+    }
 
     // Fetch recent reports for a quick list
     const recentReports = await prisma.waterTestReport.findMany({
@@ -57,7 +92,10 @@ export async function getDashboardMetrics() {
         totalComplianceIssues,
         totalUsers,
         totalOrganizations,
-        recentReports: mappedReports
+        recentReports: mappedReports,
+        reportsPassed,
+        reportsWithWarnings,
+        reportsFailed
       } 
     };
   } catch (error) {

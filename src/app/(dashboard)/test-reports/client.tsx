@@ -25,6 +25,8 @@ export function TestReportsClient({ data }: TestReportsClientProps) {
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [activeReportForPendingModal, setActiveReportForPendingModal] = useState<any | null>(null);
+  const [resultFilter, setResultFilter] = useState("ALL");
 
   // Helper: Extract parameter result
   const getParamResult = (report: any, paramName: string) => {
@@ -44,8 +46,10 @@ export function TestReportsClient({ data }: TestReportsClientProps) {
 
   const getOverallResult = (report: any) => {
     if (!report.results || report.results.length === 0) return { label: "PENDING", color: "bg-slate-100 text-slate-700 border-slate-200" };
-    const hasFail = report.results.some((res: any) => res.isPass === false);
-    if (hasFail) return { label: "FAIL", color: "bg-rose-50 text-rose-700 border-rose-200" };
+    const hasFail = report.results.some((res: any) => res.qualityStatus === "FAIL" || (!res.qualityStatus && res.isPass === false));
+    if (hasFail) return { label: "FAIL", color: "bg-rose-50 text-rose-750 border-rose-200" };
+    const hasWarning = report.results.some((res: any) => res.qualityStatus === "WARNING");
+    if (hasWarning) return { label: "WARNING", color: "bg-amber-50 text-amber-700 border-amber-200" };
     return { label: "PASS", color: "bg-emerald-50 text-emerald-700 border-emerald-250" };
   };
 
@@ -62,9 +66,14 @@ export function TestReportsClient({ data }: TestReportsClientProps) {
       if (dateFromFilter && itemDate < new Date(dateFromFilter)) return false;
       if (dateToFilter && itemDate > new Date(dateToFilter)) return false;
 
+      if (resultFilter !== "ALL") {
+        const overall = getOverallResult(item).label;
+        if (overall !== resultFilter) return false;
+      }
+
       return true;
     });
-  }, [data, search, reportTypeFilter, statusFilter, batchFilter, dateFromFilter, dateToFilter]);
+  }, [data, search, reportTypeFilter, statusFilter, batchFilter, dateFromFilter, dateToFilter, resultFilter]);
 
   // Pagination calculation
   const paginatedData = useMemo(() => {
@@ -92,6 +101,7 @@ export function TestReportsClient({ data }: TestReportsClientProps) {
     setBatchFilter("");
     setDateFromFilter("");
     setDateToFilter("");
+    setResultFilter("ALL");
   };
 
   const exportCSV = () => {
@@ -212,6 +222,19 @@ export function TestReportsClient({ data }: TestReportsClientProps) {
               <SelectItem value="REJECTED">Rejected</SelectItem>
             </SelectContent>
           </Select>
+
+          {/* Result Filter */}
+          <Select value={resultFilter} onValueChange={(val) => setResultFilter(val || "ALL")}>
+            <SelectTrigger className="h-8 text-xs bg-slate-50/50 border-slate-300 rounded-lg">
+              <SelectValue placeholder="Result" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Results</SelectItem>
+              <SelectItem value="PASS">Pass</SelectItem>
+              <SelectItem value="WARNING">Warning</SelectItem>
+              <SelectItem value="FAIL">Fail</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -228,6 +251,7 @@ export function TestReportsClient({ data }: TestReportsClientProps) {
                 <th className="py-3 px-4">pH</th>
                 <th className="py-3 px-4">TDS</th>
                 <th className="py-3 px-4">Microbiology</th>
+                <th className="py-3 px-4">Pending Tests</th>
                 <th className="py-3 px-4">Created Date</th>
                 <th className="py-3 px-4">Status</th>
                 <th className="py-3 px-4">Result</th>
@@ -274,6 +298,30 @@ export function TestReportsClient({ data }: TestReportsClientProps) {
                         <span className={`font-semibold ${microStatus === 'PASS' ? 'text-emerald-600' : microStatus === 'FAIL' ? 'text-rose-600' : 'text-slate-400'}`}>
                           {microStatus}
                         </span>
+                      </td>
+                      <td className="py-3 px-4 select-none">
+                        {(() => {
+                          const pendingList = report.pendingTests || [];
+                          const activePending = pendingList.filter((t: any) => t.status !== "COMPLETED");
+                          const pendingCount = activePending.length;
+
+                          if (pendingCount > 0) {
+                            return (
+                              <button 
+                                onClick={() => setActiveReportForPendingModal(report)}
+                                className="px-2 py-0.5 rounded border text-[9px] font-black uppercase bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 transition-colors"
+                              >
+                                {pendingCount} Pending
+                              </button>
+                            );
+                          } else {
+                            return (
+                              <span className="px-2 py-0.5 rounded border text-[9px] font-black uppercase bg-emerald-50 text-emerald-700 border-emerald-200">
+                                Completed
+                              </span>
+                            );
+                          }
+                        })()}
                       </td>
                       <td className="py-3 px-4 text-slate-600">
                         {format(new Date(report.createdAt), "dd MMM yyyy")}
@@ -358,6 +406,53 @@ export function TestReportsClient({ data }: TestReportsClientProps) {
           </div>
         )}
       </div>
+
+      {activeReportForPendingModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 font-sans text-left">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800">Pending Incubations</h3>
+                <p className="text-[10px] text-slate-400 font-mono mt-0.5 uppercase tracking-wider">Report No: RPT-{activeReportForPendingModal.reportNumber || activeReportForPendingModal.id.substring(0, 8).toUpperCase()}</p>
+              </div>
+              <button 
+                onClick={() => setActiveReportForPendingModal(null)}
+                className="text-slate-450 hover:text-slate-700 text-sm font-bold p-1 hover:bg-slate-100 rounded"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6 space-y-4 max-h-[300px] overflow-y-auto">
+              {(activeReportForPendingModal.pendingTests || []).map((test: any) => {
+                let badgeColor = "bg-slate-55 text-slate-500 border-slate-200";
+                if (test.status === "COMPLETED") badgeColor = "bg-emerald-50 text-emerald-700 border-emerald-200 font-bold";
+                else if (test.status === "OVERDUE") badgeColor = "bg-rose-50 text-rose-700 border-rose-200 animate-pulse font-black";
+                else if (test.status === "DUE_SOON") badgeColor = "bg-amber-50 text-amber-700 border-amber-250 font-bold";
+                else if (test.status === "WAITING") badgeColor = "bg-sky-50 text-sky-700 border-sky-200 font-semibold";
+
+                return (
+                  <div key={test.id} className="flex justify-between items-center border-b pb-2.5 last:border-0 last:pb-0">
+                    <div>
+                      <span className="font-bold text-slate-700 block text-xs">{test.parameterName}</span>
+                      <span className="text-[9px] text-slate-400 font-bold font-mono">
+                        Due: {format(new Date(test.dueAt), "dd MMM yyyy, hh:mm a")}
+                      </span>
+                    </div>
+                    <Badge variant="outline" className={`px-2 py-0.5 rounded border text-[9px] uppercase tracking-wider ${badgeColor}`}>
+                      {test.status.replace("_", " ")}
+                    </Badge>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex justify-end">
+              <Button size="sm" className="bg-sky-600 hover:bg-sky-700 text-white font-bold h-8 rounded-lg" onClick={() => setActiveReportForPendingModal(null)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

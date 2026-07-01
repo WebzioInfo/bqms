@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { LogoutButton } from "@/components/LogoutButton";
 import { SidebarNav } from "@/components/ui/sidebar";
 import { Role } from "@prisma/client";
+import { NotificationCenter } from "@/components/NotificationCenter";
 
 type DashboardSession = {
   user?: {
@@ -46,8 +47,11 @@ export default async function DashboardLayout({
       <div className="flex min-h-screen flex-col sm:pl-64">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/90 px-4 backdrop-blur-md sm:h-16 sm:px-6">
           <div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
-            <div className="ml-auto rounded-md border bg-card px-3 py-1.5 text-sm font-medium capitalize text-foreground shadow-sm">
-              {roleLabel}
+            <div className="ml-auto flex items-center gap-3">
+              <NotificationCenter />
+              <div className="rounded-md border bg-card px-3 py-1.5 text-sm font-medium capitalize text-foreground shadow-sm">
+                {roleLabel}
+              </div>
             </div>
           </div>
         </header>

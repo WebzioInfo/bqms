@@ -156,6 +156,7 @@ model WaterTestReport {
 
   // Relations
   results        WaterTestResult[]
+  pendingTests   PendingLabTest[]
 
   @@index([organizationId, sampleTime(sort: Desc)])
   @@index([organizationId, status, sampleTime(sort: Desc)])
@@ -197,6 +198,7 @@ model WaterTestResult {
   value            Float?
   stringValue      String?
   isPass           Boolean
+  qualityStatus    String             @default("PASS")
 
   // Standard Fields
   isActive         Boolean   @default(true)
@@ -432,4 +434,44 @@ model AuditLog {
   @@index([userId, createdAt(sort: Desc)])
   @@index([entityName, entityId])
   @@index([action, createdAt(sort: Desc)])
+}
+
+// ---------------------------------------------------------
+// PENDING LAB TESTS & NOTIFICATIONS
+// ---------------------------------------------------------
+
+model PendingLabTest {
+  id              String          @id @default(cuid())
+  reportId        String
+  report          WaterTestReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  
+  parameterName   String          // E.g. E.coli, Coliform, Pseudomonas, Clostridia, AMC 37, AMC 22, Yeast & Mold
+  status          String          // WAITING, DUE_SOON, OVERDUE, COMPLETED
+  
+  createdAt       DateTime        @default(now())
+  dueAt           DateTime
+  completedAt     DateTime?
+  completedBy     String?         // User name or email of the person who entered the value
+  completionNotes String?        @db.Text
+  
+  reminderCount   Int             @default(0)
+  lastReminderAt  DateTime?
+  
+  @@unique([reportId, parameterName])
+  @@index([reportId])
+  @@index([status])
+}
+
+model Notification {
+  id              String          @id @default(cuid())
+  organizationId  String
+  reportId        String?
+  parameterName   String?
+  title           String
+  message         String          @db.Text
+  isRead          Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  
+  @@index([organizationId, isRead])
+  @@index([reportId, parameterName])
 }

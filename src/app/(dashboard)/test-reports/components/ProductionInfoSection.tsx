@@ -1,15 +1,16 @@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { ReportFormData } from "./types";
+import { format } from "date-fns";
 
 interface Props {
   data: ReportFormData;
   updateData: (updates: Partial<ReportFormData>) => void;
+  disabled?: boolean;
 }
 
-export function ProductionInfoSection({ data, updateData }: Props) {
+export function ProductionInfoSection({ data, updateData, disabled = false }: Props) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-6">
       <div className="border-b border-slate-100 pb-4">
@@ -22,11 +23,12 @@ export function ProductionInfoSection({ data, updateData }: Props) {
           <Label htmlFor="productionDate" className="text-slate-700 font-medium">Production Date <span className="text-red-500">*</span></Label>
           <Input 
             id="productionDate" 
-            type="date" 
-            value={data.productionDate}
+            type={disabled && !data.productionDate ? "text" : "date"} 
+            value={data.productionDate ? (disabled ? format(new Date(data.productionDate), "dd MMM yyyy") : data.productionDate) : (disabled ? "—" : "")}
             onChange={(e) => updateData({ productionDate: e.target.value })}
             className="focus:ring-blue-500"
             required
+            disabled={disabled}
           />
         </div>
 
@@ -36,10 +38,11 @@ export function ProductionInfoSection({ data, updateData }: Props) {
             id="batchNumber" 
             type="text" 
             placeholder="e.g. B-12345"
-            value={data.batchNumber}
+            value={data.batchNumber || (disabled ? "—" : "")}
             onChange={(e) => updateData({ batchNumber: e.target.value })}
             className="focus:ring-blue-500"
             required
+            disabled={disabled}
           />
         </div>
 
@@ -47,18 +50,20 @@ export function ProductionInfoSection({ data, updateData }: Props) {
           <Label htmlFor="sampleTime" className="text-slate-700 font-medium">Sample Collection Time</Label>
           <Input 
             id="sampleTime" 
-            type="datetime-local" 
-            value={data.sampleTime}
+            type={disabled && !data.sampleTime ? "text" : "datetime-local"} 
+            value={data.sampleTime ? (disabled ? format(new Date(data.sampleTime), "dd MMM yyyy, hh:mm a") : data.sampleTime) : (disabled ? "—" : "")}
             onChange={(e) => updateData({ sampleTime: e.target.value })}
             className="focus:ring-blue-500"
+            disabled={disabled}
           />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="reportType" className="text-slate-700 font-medium">Report Type <span className="text-red-500">*</span></Label>
           <Select 
-            value={data.reportType} 
+            value={data.reportType || (disabled ? "—" : "")} 
             onValueChange={(val: any) => updateData({ reportType: val })}
+            disabled={disabled}
           >
             <SelectTrigger className="w-full focus:ring-blue-500">
               <SelectValue placeholder="Select type" />
@@ -68,6 +73,7 @@ export function ProductionInfoSection({ data, updateData }: Props) {
               <SelectItem value="Four Hourly pH">Four Hourly pH</SelectItem>
               <SelectItem value="Weekly">Weekly</SelectItem>
               <SelectItem value="Monthly">Monthly</SelectItem>
+              {disabled && <SelectItem value="—">—</SelectItem>}
             </SelectContent>
           </Select>
         </div>
@@ -78,9 +84,10 @@ export function ProductionInfoSection({ data, updateData }: Props) {
             id="collectedBy" 
             type="text" 
             placeholder="Name of collector"
-            value={data.collectedBy}
+            value={data.collectedBy || (disabled ? "—" : "")}
             onChange={(e) => updateData({ collectedBy: e.target.value })}
             className="focus:ring-blue-500"
+            disabled={disabled}
           />
         </div>
 
@@ -90,22 +97,12 @@ export function ProductionInfoSection({ data, updateData }: Props) {
             id="verifiedBy" 
             type="text" 
             placeholder="Name of verifier"
-            value={data.verifiedBy}
+            value={data.verifiedBy || (disabled ? "—" : "")}
             onChange={(e) => updateData({ verifiedBy: e.target.value })}
             className="focus:ring-blue-500"
+            disabled={disabled}
           />
         </div>
-      </div>
-
-      <div className="space-y-2 pt-2">
-        <Label htmlFor="remarks" className="text-slate-700 font-medium">Remarks</Label>
-        <Textarea 
-          id="remarks" 
-          placeholder="Any additional notes or observations..."
-          value={data.remarks}
-          onChange={(e) => updateData({ remarks: e.target.value })}
-          className="focus:ring-blue-500 min-h-[100px] resize-y"
-        />
       </div>
     </div>
   );

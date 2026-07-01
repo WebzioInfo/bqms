@@ -20,6 +20,8 @@ export type AuthenticatedUser = {
   id: string;
   role: Role;
   organizationId: string | null;
+  name?: string | null;
+  email?: string | null;
 };
 
 export async function getAuthenticatedUser(): Promise<AuthenticatedUser> {
@@ -34,6 +36,8 @@ export async function getAuthenticatedUser(): Promise<AuthenticatedUser> {
     id: user.id,
     role: user.role as Role,
     organizationId: user.organizationId ?? null,
+    name: user.name ?? null,
+    email: user.email ?? null,
   };
 }
 
