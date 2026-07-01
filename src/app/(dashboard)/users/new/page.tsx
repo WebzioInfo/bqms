@@ -3,8 +3,17 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { getOrganizations } from "@/app/actions/organization";
+import { getAuthenticatedUser } from "@/lib/auth/tenant-access";
+import { redirect } from "next/navigation";
 
 export default async function NewUserPage() {
+  let currentUser;
+  try {
+    currentUser = await getAuthenticatedUser();
+  } catch (error) {
+    redirect("/login");
+  }
+
   const result = await getOrganizations();
   const organizations = result.success ? result.data : [];
 
@@ -22,7 +31,7 @@ export default async function NewUserPage() {
         </div>
       </div>
 
-      <UserForm organizations={organizations || []} />
+      <UserForm organizations={organizations || []} currentUserRole={currentUser.role} />
     </div>
   );
 }

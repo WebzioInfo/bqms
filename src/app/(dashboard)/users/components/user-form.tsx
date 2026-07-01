@@ -14,18 +14,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 interface UserFormProps {
   initialData?: any;
   organizations: any[];
+  currentUserRole?: string;
 }
 
 import { useToast } from "@/components/ui/toast-context";
 import { ButtonLoader } from "@/components/ui/button-loader";
 
-export function UserForm({ initialData, organizations }: UserFormProps) {
+export function UserForm({ initialData, organizations, currentUserRole = "PLATFORM_ADMIN" }: UserFormProps) {
   const router = useRouter();
   const toast = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isEditing = !!initialData;
+
+  const defaultRoleValue = initialData?.role 
+    ? initialData.role 
+    : (currentUserRole === "COMPANY_ADMIN" ? "QC" : "COMPANY_ADMIN");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -41,7 +46,7 @@ export function UserForm({ initialData, organizations }: UserFormProps) {
       name: formData.get("name"),
       email: formData.get("email"),
       password: formData.get("password") || undefined,
-      role: role,
+      role: role || defaultRoleValue,
       organizationId: organizationId || null,
       isActive: formData.get("isActive") === "on",
     };
@@ -104,13 +109,15 @@ export function UserForm({ initialData, organizations }: UserFormProps) {
 
             <div className="space-y-2">
               <Label htmlFor="role">User Role <span className="text-red-500">*</span></Label>
-              <input type="hidden" name="role" id="hidden-role" defaultValue={initialData?.role || "COMPANY_ADMIN"} />
-              <Select defaultValue={initialData?.role || "COMPANY_ADMIN"} onValueChange={(v) => { (document.getElementById('hidden-role') as HTMLInputElement).value = v }}>
+              <input type="hidden" name="role" id="hidden-role" defaultValue={defaultRoleValue} />
+              <Select defaultValue={defaultRoleValue} onValueChange={(v) => { (document.getElementById('hidden-role') as HTMLInputElement).value = v }} disabled={currentUserRole === "COMPANY_ADMIN"}>
                 <SelectTrigger className="bg-muted/30">
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="COMPANY_ADMIN">Company Admin</SelectItem>
+                  {currentUserRole !== "COMPANY_ADMIN" && (
+                    <SelectItem value="COMPANY_ADMIN">Company Admin</SelectItem>
+                  )}
                   <SelectItem value="QC">Quality Control (QC)</SelectItem>
                 </SelectContent>
               </Select>

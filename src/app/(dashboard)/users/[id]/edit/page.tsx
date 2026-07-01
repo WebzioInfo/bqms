@@ -4,10 +4,18 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { getUserById } from "@/app/actions/user";
 import { getOrganizations } from "@/app/actions/organization";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { getAuthenticatedUser } from "@/lib/auth/tenant-access";
 
 export default async function EditUserPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  let currentUser;
+  try {
+    currentUser = await getAuthenticatedUser();
+  } catch (error) {
+    redirect("/login");
+  }
+
   const [userResult, orgResult] = await Promise.all([
     getUserById(id),
     getOrganizations()
@@ -33,7 +41,7 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
         </div>
       </div>
 
-      <UserForm initialData={userResult.data} organizations={organizations || []} />
+      <UserForm initialData={userResult.data} organizations={organizations || []} currentUserRole={currentUser.role} />
     </div>
   );
 }
