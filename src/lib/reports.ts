@@ -6,9 +6,18 @@ import pdfFonts from 'pdfmake/build/vfs_fonts';
 
 // Setup pdfMake fonts
 // @ts-ignore
-if (pdfMake && pdfFonts && pdfFonts.pdfMake) {
+if (pdfMake && pdfFonts) {
   // @ts-ignore
-  pdfMake.vfs = pdfFonts.pdfMake.vfs;
+  pdfMake.vfs = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts;
+  // @ts-ignore
+  pdfMake.fonts = {
+    Roboto: {
+      normal: 'Roboto-Regular.ttf',
+      bold: 'Roboto-Medium.ttf',
+      italic: 'Roboto-Italic.ttf',
+      bolditalic: 'Roboto-MediumItalic.ttf'
+    }
+  };
 }
 
 export type ExportFormat = 'pdf' | 'xlsx' | 'csv' | 'json' | 'xml';
@@ -115,49 +124,41 @@ export class ReportGeneratorService {
     });
   }
 
-  private static generatePDF(data: ReportData): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
-      const documentDefinition: any = {
-        content: [
-          { text: data.title, style: 'header' },
-          { text: '\n' }
-        ],
-        styles: {
-          header: { fontSize: 18, bold: true, alignment: 'center' },
-          tableHeader: { bold: true, fillColor: '#f2f2f2' }
-        }
-      };
-
-      if (data.metadata) {
-        Object.entries(data.metadata).forEach(([k, v]) => {
-          documentDefinition.content.push({ text: `${k}: ${v}`, margin: [0, 0, 0, 5] });
-        });
-        documentDefinition.content.push({ text: '\n' });
+  private static async generatePDF(data: ReportData): Promise<Buffer> {
+    const documentDefinition: any = {
+      content: [
+        { text: data.title, style: 'header' },
+        { text: '\n' }
+      ],
+      styles: {
+        header: { fontSize: 18, bold: true, alignment: 'center' },
+        tableHeader: { bold: true, fillColor: '#f2f2f2' }
       }
+    };
 
-      // Add table
-      const tableBody = [
-        data.headers.map(h => ({ text: h, style: 'tableHeader' })),
-        ...data.rows.map(row => row.map((cell: any) => String(cell || '')))
-      ];
-
-      documentDefinition.content.push({
-        table: {
-          headerRows: 1,
-          widths: Array(data.headers.length).fill('*'),
-          body: tableBody
-        }
+    if (data.metadata) {
+      Object.entries(data.metadata).forEach(([k, v]) => {
+        documentDefinition.content.push({ text: `${k}: ${v}`, margin: [0, 0, 0, 5] });
       });
+      documentDefinition.content.push({ text: '\n' });
+    }
 
-      try {
-        const pdfDocGenerator = pdfMake.createPdf(documentDefinition);
-        // @ts-ignore
-        pdfDocGenerator.getBuffer((buffer) => {
-          resolve(buffer);
-        });
-      } catch (err) {
-        reject(err);
+    // Add table
+    const tableBody = [
+      data.headers.map(h => ({ text: h, style: 'tableHeader' })),
+      ...data.rows.map(row => row.map((cell: any) => String(cell || '')))
+    ];
+
+    documentDefinition.content.push({
+      table: {
+        headerRows: 1,
+        widths: Array(data.headers.length).fill('*'),
+        body: tableBody
       }
     });
+
+    const pdfDocGenerator = pdfMake.createPdf(documentDefinition);
+    const buffer = await pdfDocGenerator.getBuffer();
+    return buffer;
   }
 }

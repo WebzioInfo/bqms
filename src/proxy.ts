@@ -17,6 +17,7 @@ const STATIC_ROUTES = [
 const EXCLUDED_API_ROUTES = [
   "/api/auth",
   "/api/v1", // REST API endpoints authenticated via custom tokens
+  "/api/public", // Public verification endpoints
 ];
 
 export default withAuth(
