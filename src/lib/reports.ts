@@ -14,8 +14,8 @@ if (pdfMake && pdfFonts) {
     Roboto: {
       normal: 'Roboto-Regular.ttf',
       bold: 'Roboto-Medium.ttf',
-      italic: 'Roboto-Italic.ttf',
-      bolditalic: 'Roboto-MediumItalic.ttf'
+      italics: 'Roboto-Italic.ttf',
+      bolditalics: 'Roboto-MediumItalic.ttf'
     }
   };
 }
