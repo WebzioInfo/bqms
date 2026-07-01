@@ -5,15 +5,21 @@ import { ArrowLeft } from "lucide-react";
 import { getComplianceRecordById } from "@/app/actions/compliance";
 import { getOrganizations } from "@/app/actions/organization";
 import { notFound } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getAuthenticatedUser } from "@/lib/auth/tenant-access";
+import { redirect } from "next/navigation";
 
 export default async function EditComplianceRecordPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [recordResult, orgResult, session] = await Promise.all([
+  let user;
+  try {
+    user = await getAuthenticatedUser();
+  } catch (error) {
+    redirect("/login");
+  }
+
+  const [recordResult, orgResult] = await Promise.all([
     getComplianceRecordById(id),
-    getOrganizations(),
-    getServerSession(authOptions)
+    getOrganizations()
   ]);
 
   if (!recordResult.success || !recordResult.data) {
@@ -21,7 +27,7 @@ export default async function EditComplianceRecordPage({ params }: { params: Pro
   }
 
   const organizations = orgResult.success ? orgResult.data : [];
-  const currentUserId = (session?.user as any)?.id || "unknown";
+  const currentUserId = user.id;
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto animate-in fade-in duration-500">

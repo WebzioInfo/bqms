@@ -18,8 +18,12 @@ interface CustomerFormProps {
   currentUserId: string;
 }
 
+import { useToast } from "@/components/ui/toast-context";
+import { ButtonLoader } from "@/components/ui/button-loader";
+
 export function CustomerForm({ initialData, organizations, currentUserId }: CustomerFormProps) {
   const router = useRouter();
+  const toast = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,6 +49,7 @@ export function CustomerForm({ initialData, organizations, currentUserId }: Cust
     };
 
     if (!data.organizationId) {
+      toast.error("Organization is required.");
       setError("Organization is required.");
       setIsSubmitting(false);
       return;
@@ -57,9 +62,12 @@ export function CustomerForm({ initialData, organizations, currentUserId }: Cust
     setIsSubmitting(false);
 
     if (res.success && res.data) {
+      toast.success(isEditing ? "Customer updated successfully." : "Customer created successfully.");
       router.push(`/customers/${res.data.id}`);
     } else {
-      setError(res.error || "An unknown error occurred.");
+      const errMsg = res.error || "Unable to save customer.";
+      toast.error(errMsg);
+      setError(errMsg);
     }
   }
 
@@ -131,12 +139,16 @@ export function CustomerForm({ initialData, organizations, currentUserId }: Cust
           </div>
 
           <div className="flex justify-end pt-4 border-t">
-            <Button type="button" variant="outline" className="mr-3" onClick={() => router.back()}>
+            <Button type="button" variant="outline" className="mr-3" onClick={() => router.back()} disabled={isSubmitting}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              {isEditing ? "Save Changes" : "Add Customer"}
+              <ButtonLoader 
+                loading={isSubmitting} 
+                label={isEditing ? "Save Changes" : "Add Customer"} 
+                loadingLabel={isEditing ? "Saving..." : "Adding..."} 
+                icon={<Save className="h-4 w-4" />}
+              />
             </Button>
           </div>
         </form>

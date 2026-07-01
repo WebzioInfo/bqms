@@ -17,8 +17,12 @@ interface ComplianceFormProps {
   currentUserId: string;
 }
 
+import { useToast } from "@/components/ui/toast-context";
+import { ButtonLoader } from "@/components/ui/button-loader";
+
 export function ComplianceForm({ initialData, organizations, currentUserId }: ComplianceFormProps) {
   const router = useRouter();
+  const toast = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,6 +49,7 @@ export function ComplianceForm({ initialData, organizations, currentUserId }: Co
     };
 
     if (!data.organizationId) {
+      toast.error("Organization is required.");
       setError("Organization is required.");
       setIsSubmitting(false);
       return;
@@ -57,9 +62,12 @@ export function ComplianceForm({ initialData, organizations, currentUserId }: Co
     setIsSubmitting(false);
 
     if (res.success && res.data) {
+      toast.success(isEditing ? "Compliance record updated successfully." : "Compliance record logged successfully.");
       router.push(`/compliance/${res.data.id}`);
     } else {
-      setError(res.error || "An unknown error occurred.");
+      const errMsg = res.error || "Unable to save compliance record.";
+      toast.error(errMsg);
+      setError(errMsg);
     }
   }
 
@@ -151,12 +159,16 @@ export function ComplianceForm({ initialData, organizations, currentUserId }: Co
           </div>
 
           <div className="flex justify-end pt-4 border-t">
-            <Button type="button" variant="outline" className="mr-3" onClick={() => router.back()}>
+            <Button type="button" variant="outline" className="mr-3" onClick={() => router.back()} disabled={isSubmitting}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              {isEditing ? "Save Changes" : "Log Record"}
+              <ButtonLoader 
+                loading={isSubmitting} 
+                label={isEditing ? "Save Changes" : "Log Record"} 
+                loadingLabel={isEditing ? "Saving..." : "Creating..."} 
+                icon={<Save className="h-4 w-4" />}
+              />
             </Button>
           </div>
         </form>

@@ -15,6 +15,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { enterPendingTestResult } from "@/app/actions/reminder";
+import { useToast } from "@/components/ui/toast-context";
+import { ButtonLoader } from "@/components/ui/button-loader";
 
 interface Props {
   organizationId: string;
@@ -24,6 +26,7 @@ interface Props {
 
 export function ReportForm({ organizationId, initialData, disabled = false }: Props) {
   const router = useRouter();
+  const toast = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [activePendingTestForCompletion, setActivePendingTestForCompletion] = useState<any | null>(null);
   const [quickValue, setQuickValue] = useState("");
@@ -43,6 +46,7 @@ export function ReportForm({ organizationId, initialData, disabled = false }: Pr
       });
 
       if (result.success) {
+        toast.success("Incubation result entered successfully.");
         // Reset and close
         setActivePendingTestForCompletion(null);
         setQuickValue("");
@@ -50,11 +54,11 @@ export function ReportForm({ organizationId, initialData, disabled = false }: Pr
         setQuickNotes("");
         router.refresh();
       } else {
-        alert(result.error || "Failed to enter result.");
+        toast.error(result.error || "Failed to enter incubation result.");
       }
     } catch (err) {
       console.error(err);
-      alert("An unexpected error occurred.");
+      toast.error("Unable to enter incubation result.");
     } finally {
       setIsSubmittingQuickResult(false);
     }
@@ -153,13 +157,13 @@ export function ReportForm({ organizationId, initialData, disabled = false }: Pr
   const handleSave = async (status: "DRAFT" | "SUBMITTED") => {
     // Validation
     if (!formData.productionDate || !formData.batchNumber) {
-      alert("Validation Error: Production Date and Batch Number are required.");
+      toast.warning("Production Date and Batch Number are required.");
       return;
     }
 
     const resultsArray = Object.values(formData.results).filter(r => r.value !== "" || r.stringValue !== "");
     if (resultsArray.length === 0) {
-      alert("Validation Error: At least one parameter must be entered.");
+      toast.warning("At least one parameter must be entered.");
       return;
     }
 
@@ -195,14 +199,17 @@ export function ReportForm({ organizationId, initialData, disabled = false }: Pr
       }
       
       if (result.success) {
-        alert(`Success: Report ${status === "DRAFT" ? "saved as draft" : "submitted"} successfully.`);
+        toast.success(initialData?.id 
+          ? "Water Test Report updated successfully." 
+          : "Water Test Report created successfully."
+        );
         router.push("/test-reports");
       } else {
-        alert(`Error: ${result.error || "Failed to save report."}`);
+        toast.error(result.error || "Unable to save Water Test Report.");
       }
     } catch (error) {
       console.error(error);
-      alert("Error: An unexpected error occurred.");
+      toast.error("Unable to save Water Test Report.");
     } finally {
       setIsSaving(false);
     }
@@ -377,20 +384,29 @@ export function ReportForm({ organizationId, initialData, disabled = false }: Pr
                 onClick={() => handleSave("DRAFT")}
                 disabled={isSaving}
               >
-                <Save className="w-4 h-4 mr-2" /> Save Draft
+                <ButtonLoader 
+                  loading={isSaving} 
+                  label="Save Draft" 
+                  loadingLabel="Saving..." 
+                  icon={<Save className="w-4 h-4" />}
+                />
               </Button>
               <Button 
                 className="w-full justify-center h-12 bg-blue-600 hover:bg-blue-700" 
                 onClick={() => handleSave("SUBMITTED")}
                 disabled={isSaving}
               >
-                <Send className="w-4 h-4 mr-2" /> Submit Report
+                <ButtonLoader 
+                  loading={isSaving} 
+                  label="Submit Report" 
+                  loadingLabel="Submitting..." 
+                  icon={<Send className="w-4 h-4" />}
+                />
               </Button>
             </div>
           )}
         </div>
       </div>
-
       {/* Quick Incubation Entry Modal */}
       {activePendingTestForCompletion && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200 font-sans">

@@ -20,7 +20,12 @@ export async function getCertificates() {
       select: {
         id: true,
         organizationId: true,
-        batchNumber: true,
+        reportId: true,
+        report: {
+          select: {
+            batchNumber: true,
+          }
+        },
         certificateUrl: true,
         status: true,
         issuedAt: true,
@@ -42,6 +47,8 @@ export async function getCertificates() {
       return {
         ...c,
         ...extra,
+        batchNumber: c.report?.batchNumber || "Unknown",
+        reportNumber: c.reportId.substring(0, 8).toUpperCase(),
         issueDate: c.issuedAt,
         organization: orgMap[c.organizationId] || null
       };
@@ -57,19 +64,14 @@ export async function getCertificateById(id: string) {
   try {
     const user = await requireAnyRole([Role.PLATFORM_ADMIN, Role.COMPANY_ADMIN]);
     const certificate = await prisma.certificate.findFirst({
-      where: { id, ...scopedOrganizationWhere(user) }
+      where: { id, ...scopedOrganizationWhere(user) },
+      include: {
+        report: true,
+      }
     });
     if (!certificate) return { success: false, error: "Not found" };
     
     const org = await prisma.organization.findUnique({ where: { id: certificate.organizationId } });
-    const linkedReports = await prisma.waterTestReport.findMany({
-      where: {
-        organizationId: certificate.organizationId,
-        batchNumber: certificate.batchNumber,
-      },
-      orderBy: { sampleTime: "desc" },
-      take: 10,
-    });
     
     let extra = { certificateNumber: certificate.id.substring(0, 8).toUpperCase(), expiryDate: null, standard: "BIS IS 14543" };
     if (certificate.certificateUrl && certificate.certificateUrl.startsWith("{")) {
@@ -81,10 +83,10 @@ export async function getCertificateById(id: string) {
       ...extra,
       issueDate: certificate.issuedAt,
       organization: org,
-      linkedReports: linkedReports.map((report) => ({
-        ...report,
-        reportNumber: report.id.substring(0, 8).toUpperCase(),
-      })),
+      linkedReports: certificate.report ? [{
+        ...certificate.report,
+        reportNumber: certificate.report.id.substring(0, 8).toUpperCase(),
+      }] : [],
     };
     
     return { success: true, data: mapped };
@@ -103,14 +105,14 @@ export async function createCertificate(data: any, userId: string) {
     const expiryDate = new Date(issueDate);
     expiryDate.setMonth(expiryDate.getMonth() + 6); // 6 months validity
 
-    const extra = JSON.stringify({ certificateNumber, expiryDate, standard: data.standard || "BIS IS 14543" });
+    const extra = JSON.stringify({ certificateNumber, expiryDate, standard: data.standard || "BIS IS 14543", certificateImage: data.certificateImage });
 
     const newCertificate = await prisma.certificate.create({
       data: {
         certificateUrl: extra,
         issuedAt: issueDate,
         status: data.status || "ISSUED",
-        batchNumber: data.batchNumber || "UNKNOWN",
+        reportId: data.reportId,
         organizationId,
         createdBy: user.id || userId,
         isActive: true,
@@ -136,7 +138,7 @@ export async function updateCertificate(id: string, data: any, userId: string) {
       expiryDate.setMonth(expiryDate.getMonth() + 6);
     }
     
-    const extra = JSON.stringify({ certificateNumber: data.certificateNumber, expiryDate, standard: data.standard });
+    const extra = JSON.stringify({ certificateNumber: data.certificateNumber, expiryDate, standard: data.standard, certificateImage: data.certificateImage });
 
     const updated = await prisma.certificate.updateMany({
       where: { id, organizationId },
@@ -144,7 +146,7 @@ export async function updateCertificate(id: string, data: any, userId: string) {
         certificateUrl: extra,
         status: data.status,
         issuedAt: issueDate,
-        batchNumber: data.batchNumber,
+        reportId: data.reportId,
         updatedBy: user.id || userId,
       }
     });

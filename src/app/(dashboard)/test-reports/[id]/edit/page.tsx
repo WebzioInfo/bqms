@@ -4,15 +4,19 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { getTestReportById } from "@/app/actions/report";
 import { notFound } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getAuthenticatedUser } from "@/lib/auth/tenant-access";
+import { redirect } from "next/navigation";
 
 export default async function EditTestReportPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [reportResult, session] = await Promise.all([
-    getTestReportById(id),
-    getServerSession(authOptions)
-  ]);
+  let user;
+  try {
+    user = await getAuthenticatedUser();
+  } catch (error) {
+    redirect("/login");
+  }
+
+  const reportResult = await getTestReportById(id);
 
   if (!reportResult.success || !reportResult.data) {
     if (reportResult.error === "Not found") {

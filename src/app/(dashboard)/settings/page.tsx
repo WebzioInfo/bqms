@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getAuthenticatedUser } from "@/lib/auth/tenant-access";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,11 +6,15 @@ import { Button } from "@/components/ui/button";
 import prisma from "@/lib/prisma";
 
 export default async function SettingsPage() {
-  const session = await getServerSession(authOptions);
-  if (!session) redirect("/login");
+  let user;
+  try {
+    user = await getAuthenticatedUser();
+  } catch (error) {
+    redirect("/login");
+  }
 
-  const role = ((session as any).user as any).role;
-  const organizationId = ((session as any).user as any).organizationId;
+  const role = user.role;
+  const organizationId = user.organizationId;
 
   let org = null;
   if (organizationId) {

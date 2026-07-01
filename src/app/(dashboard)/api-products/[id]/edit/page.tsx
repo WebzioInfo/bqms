@@ -4,21 +4,25 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { getApiProductById } from "@/app/actions/api-product";
 import { notFound } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getAuthenticatedUser } from "@/lib/auth/tenant-access";
+import { redirect } from "next/navigation";
 
 export default async function EditApiProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [productResult, session] = await Promise.all([
-    getApiProductById(id),
-    getServerSession(authOptions)
-  ]);
+  let user;
+  try {
+    user = await getAuthenticatedUser();
+  } catch (error) {
+    redirect("/login");
+  }
+
+  const productResult = await getApiProductById(id);
 
   if (!productResult.success || !productResult.data) {
     notFound();
   }
 
-  const currentUserId = (session?.user as any)?.id || "unknown";
+  const currentUserId = user.id;
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto animate-in fade-in duration-500">

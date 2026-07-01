@@ -8,16 +8,20 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { createCertificate, updateCertificate } from "@/app/actions/certificate";
 import { Loader2, Save } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface CertificateFormProps {
   initialData?: any;
   organizations: any[];
+  reports: any[];
   currentUserId: string;
 }
 
-export function CertificateForm({ initialData, organizations, currentUserId }: CertificateFormProps) {
+import { useToast } from "@/components/ui/toast-context";
+import { ButtonLoader } from "@/components/ui/button-loader";
+
+export function CertificateForm({ initialData, organizations, reports, currentUserId }: CertificateFormProps) {
   const router = useRouter();
+  const toast = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,21 +35,25 @@ export function CertificateForm({ initialData, organizations, currentUserId }: C
     const formData = new FormData(e.currentTarget);
     
     const organizationId = (document.getElementById('hidden-org') as HTMLInputElement)?.value;
+    const reportId = (document.getElementById('hidden-report') as HTMLInputElement)?.value;
     const status = (document.getElementById('hidden-status') as HTMLInputElement)?.value;
 
     const data = {
       certificateNumber: formData.get("certificateNumber"),
       issueDate: formData.get("issueDate"),
       standard: formData.get("standard"),
+      certificateImage: formData.get("certificateImage"),
       organizationId: organizationId,
-      batchNumber: formData.get("batchNumber"),
-      status: status || "DRAFT",
+      reportId: reportId,
+      status: status || "ISSUED",
     };
 
-    if (!data.organizationId || !data.batchNumber) {
-      setError("Organization and Batch Number are required.");
-      setIsSubmitting(false);
-      return;
+    // Frontend validation removed as per user request to hide these fields
+    if (!data.organizationId && reports.length > 0) {
+      data.organizationId = reports[0].organizationId;
+    }
+    if (!data.reportId && reports.length > 0) {
+      data.reportId = reports[0].id;
     }
 
     const res = isEditing 
@@ -55,15 +63,24 @@ export function CertificateForm({ initialData, organizations, currentUserId }: C
     setIsSubmitting(false);
 
     if (res.success && res.data) {
+      toast.success(isEditing ? "Certificate updated successfully." : "Certificate issued successfully.");
       router.push(`/certificates/${res.data.id}`);
     } else {
-      setError(res.error || "An unknown error occurred.");
+      const errMsg = res.error || "Unable to save certificate.";
+      toast.error(errMsg);
+      setError(errMsg);
     }
   }
 
   const defaultDate = initialData?.issueDate 
     ? new Date(initialData.issueDate).toISOString().split('T')[0]
     : new Date().toISOString().split('T')[0];
+
+  // Resolve organization and report references automatically
+  const defaultReport = reports.find(r => r.id === initialData?.reportId) || reports[0];
+  const reportId = initialData?.reportId || defaultReport?.id || "";
+  const organizationId = initialData?.organizationId || defaultReport?.organizationId || "";
+  const status = initialData?.status || "ISSUED";
 
   return (
     <Card className="shadow-sm border-muted/60 overflow-hidden rounded-xl">
@@ -75,7 +92,17 @@ export function CertificateForm({ initialData, organizations, currentUserId }: C
         )}
         
         <form onSubmit={onSubmit} className="space-y-6">
+          {/* Hidden inputs placed outside commented-out blocks so they exist in the DOM */}
+          <input type="hidden" name="organizationId" id="hidden-org" defaultValue={organizationId} />
+          <input type="hidden" name="reportId" id="hidden-report" defaultValue={reportId} />
+          <input type="hidden" name="status" id="hidden-status" defaultValue={status} />
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="standard">Certificate Name <span className="text-red-500">*</span></Label>
+              <Input id="standard" name="standard" defaultValue={initialData?.standard || "BIS IS 14543"} required className="bg-muted/30" />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="certificateNumber">Certificate Number</Label>
               <Input id="certificateNumber" name="certificateNumber" defaultValue={initialData?.certificateNumber} placeholder="Leave empty to auto-generate" className="bg-muted/30" />
@@ -86,57 +113,30 @@ export function CertificateForm({ initialData, organizations, currentUserId }: C
               <Input id="issueDate" name="issueDate" type="date" defaultValue={defaultDate} required className="bg-muted/30" />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="standard">Compliance Standard <span className="text-red-500">*</span></Label>
-              <Input id="standard" name="standard" defaultValue={initialData?.standard || "BIS IS 14543"} required className="bg-muted/30" />
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="certificateImage">Certificate Image URL</Label>
+              <Input id="certificateImage" name="certificateImage" type="url" defaultValue={initialData?.certificateImage || ""} placeholder="https://example.com/image.jpg" className="bg-muted/30" />
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="batchNumber">Production Batch Number <span className="text-red-500">*</span></Label>
-              <Input id="batchNumber" name="batchNumber" defaultValue={initialData?.batchNumber} required placeholder="e.g. EB26175" className="bg-muted/30" />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="organizationId">Organization <span className="text-red-500">*</span></Label>
-              <input type="hidden" name="organizationId" id="hidden-org" defaultValue={initialData?.organizationId || ""} />
-              <Select defaultValue={initialData?.organizationId || ""} onValueChange={(v) => { (document.getElementById('hidden-org') as HTMLInputElement).value = v }}>
-                <SelectTrigger className="bg-muted/30">
-                  <SelectValue placeholder="Select organization" />
-                </SelectTrigger>
-                <SelectContent>
-                  {organizations.map((org) => (
-                    <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {isEditing && (
-              <div className="space-y-2">
-                <Label htmlFor="status">Certificate Status <span className="text-red-500">*</span></Label>
-                <input type="hidden" name="status" id="hidden-status" defaultValue={initialData?.status || "DRAFT"} />
-                <Select defaultValue={initialData?.status || "DRAFT"} onValueChange={(v) => { (document.getElementById('hidden-status') as HTMLInputElement).value = v }}>
-                  <SelectTrigger className="bg-muted/30">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="DRAFT">Draft</SelectItem>
-                    <SelectItem value="ISSUED">Issued</SelectItem>
-                    <SelectItem value="REVOKED">Revoked</SelectItem>
-                    <SelectItem value="EXPIRED">Expired</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
           </div>
 
+          {initialData?.certificateImage && (
+            <div className="mt-4 border rounded-lg p-4 bg-muted/10">
+              <Label className="mb-2 block">Current Image</Label>
+              <img src={initialData.certificateImage} alt="Certificate" className="max-h-64 object-contain rounded-md" />
+            </div>
+          )}
+
           <div className="flex justify-end pt-4 border-t">
-            <Button type="button" variant="outline" className="mr-3" onClick={() => router.back()}>
+            <Button type="button" variant="outline" className="mr-3" onClick={() => router.back()} disabled={isSubmitting}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              {isEditing ? "Save Changes" : "Issue Certificate"}
+              <ButtonLoader 
+                loading={isSubmitting} 
+                label={isEditing ? "Save Changes" : "Issue Certificate"} 
+                loadingLabel={isEditing ? "Saving..." : "Generating..."} 
+                icon={<Save className="h-4 w-4" />}
+              />
             </Button>
           </div>
         </form>

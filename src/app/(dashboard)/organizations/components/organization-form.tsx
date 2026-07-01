@@ -14,8 +14,12 @@ interface OrganizationFormProps {
   initialData?: any;
 }
 
+import { useToast } from "@/components/ui/toast-context";
+import { ButtonLoader } from "@/components/ui/button-loader";
+
 export function OrganizationForm({ initialData }: OrganizationFormProps) {
   const router = useRouter();
+  const toast = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,9 +47,12 @@ export function OrganizationForm({ initialData }: OrganizationFormProps) {
     setIsSubmitting(false);
 
     if (res.success && res.data) {
+      toast.success(isEditing ? "Organization updated successfully." : "Organization created successfully.");
       router.push(`/organizations/${res.data.id}`);
     } else {
-      setError(res.error || "An unknown error occurred.");
+      const errMsg = res.error || "Unable to save organization.";
+      toast.error(errMsg);
+      setError(errMsg);
     }
   }
 
@@ -92,12 +99,16 @@ export function OrganizationForm({ initialData }: OrganizationFormProps) {
           </div>
 
           <div className="flex justify-end pt-4 border-t">
-            <Button type="button" variant="outline" className="mr-3" onClick={() => router.back()}>
+            <Button type="button" variant="outline" className="mr-3" onClick={() => router.back()} disabled={isSubmitting}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              {isEditing ? "Save Changes" : "Create Organization"}
+              <ButtonLoader 
+                loading={isSubmitting} 
+                label={isEditing ? "Save Changes" : "Create Organization"} 
+                loadingLabel={isEditing ? "Saving..." : "Creating..."} 
+                icon={<Save className="h-4 w-4" />}
+              />
             </Button>
           </div>
         </form>

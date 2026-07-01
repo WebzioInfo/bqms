@@ -1,12 +1,15 @@
 import { getCertificates } from "@/app/actions/certificate";
 import { QrCodesClient } from "./client";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getAuthenticatedUser } from "@/lib/auth/tenant-access";
 import { redirect } from "next/navigation";
 
 export default async function QrCodesPage() {
-  const session = await getServerSession(authOptions);
-  if (!session) redirect("/login");
+  let user;
+  try {
+    user = await getAuthenticatedUser();
+  } catch (error) {
+    redirect("/login");
+  }
 
   const { data: certificates } = await getCertificates();
 

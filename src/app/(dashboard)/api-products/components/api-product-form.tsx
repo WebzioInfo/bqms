@@ -16,8 +16,12 @@ interface ApiProductFormProps {
   currentUserId: string;
 }
 
+import { useToast } from "@/components/ui/toast-context";
+import { ButtonLoader } from "@/components/ui/button-loader";
+
 export function ApiProductForm({ initialData, currentUserId }: ApiProductFormProps) {
   const router = useRouter();
+  const toast = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,9 +54,12 @@ export function ApiProductForm({ initialData, currentUserId }: ApiProductFormPro
     setIsSubmitting(false);
 
     if (res.success && res.data) {
+      toast.success(isEditing ? "API Product updated successfully." : "API Product created successfully.");
       router.push(`/api-products/${res.data.id}`);
     } else {
-      setError(res.error || "An unknown error occurred.");
+      const errMsg = res.error || "Unable to save API product.";
+      toast.error(errMsg);
+      setError(errMsg);
     }
   }
 
@@ -102,12 +109,16 @@ export function ApiProductForm({ initialData, currentUserId }: ApiProductFormPro
           </div>
 
           <div className="flex justify-end pt-4 border-t">
-            <Button type="button" variant="outline" className="mr-3" onClick={() => router.back()}>
+            <Button type="button" variant="outline" className="mr-3" onClick={() => router.back()} disabled={isSubmitting}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              {isEditing ? "Save Changes" : "Create Product"}
+              <ButtonLoader 
+                loading={isSubmitting} 
+                label={isEditing ? "Save Changes" : "Create Product"} 
+                loadingLabel={isEditing ? "Saving..." : "Creating..."} 
+                icon={<Save className="h-4 w-4" />}
+              />
             </Button>
           </div>
         </form>

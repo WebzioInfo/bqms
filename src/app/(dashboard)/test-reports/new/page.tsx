@@ -3,17 +3,23 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getAuthenticatedUser } from "@/lib/auth/tenant-access";
+import { redirect } from "next/navigation";
 import { getOrganizations } from "@/app/actions/organization";
 
 export default async function NewTestReportPage() {
-  const [orgResult, session] = await Promise.all([
-    getOrganizations(),
-    getServerSession(authOptions)
+  let user;
+  try {
+    user = await getAuthenticatedUser();
+  } catch (error) {
+    redirect("/login");
+  }
+
+  const [orgResult] = await Promise.all([
+    getOrganizations()
   ]);
   const organizations = orgResult.success && orgResult.data ? orgResult.data : [];
-  const userOrgId = (session?.user as any)?.organizationId || (organizations?.[0]?.id || "");
+  const userOrgId = user.organizationId || (organizations?.[0]?.id || "");
 
   return (
     <div className="space-y-6 max-w-[1600px] w-full mx-auto px-4 animate-in fade-in duration-500">

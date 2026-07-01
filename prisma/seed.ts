@@ -217,7 +217,7 @@ async function main() {
         await prisma.certificate.create({
           data: {
             organizationId: org.id,
-            batchNumber: batchNumberStr,
+            reportId: report.id,
             status: CertificateStatus.ISSUED,
             issuedAt: faker.date.recent({ days: 10 }),
           }

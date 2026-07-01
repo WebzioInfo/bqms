@@ -16,8 +16,12 @@ interface UserFormProps {
   organizations: any[];
 }
 
+import { useToast } from "@/components/ui/toast-context";
+import { ButtonLoader } from "@/components/ui/button-loader";
+
 export function UserForm({ initialData, organizations }: UserFormProps) {
   const router = useRouter();
+  const toast = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,11 +33,6 @@ export function UserForm({ initialData, organizations }: UserFormProps) {
     setError(null);
 
     const formData = new FormData(e.currentTarget);
-    
-    // We get role and organizationId manually because they are from Select components
-    // Actually, Select inside a form doesn't pass standard form data unless configured to.
-    // Let's rely on standard html hidden inputs or simple state if needed. 
-    // In shadcn, we usually use react-hook-form. For this simple form, we'll grab values directly.
 
     const role = (document.querySelector('input[name="role"]') as HTMLInputElement)?.value;
     const organizationId = (document.querySelector('input[name="organizationId"]') as HTMLInputElement)?.value;
@@ -48,27 +47,32 @@ export function UserForm({ initialData, organizations }: UserFormProps) {
     };
 
     if (!data.role) {
+      toast.error("Role is required.");
       setError("Role is required.");
       setIsSubmitting(false);
       return;
     }
 
     if (data.role !== "PLATFORM_ADMIN" && !data.organizationId) {
+      toast.error("Company Admins and QCs must belong to an organization.");
       setError("Company Admins and QCs must belong to an organization.");
       setIsSubmitting(false);
       return;
     }
 
-    const res = isEditing 
+    const res = isEditing
       ? await updateUser(initialData.id, data)
       : await createUser(data);
 
     setIsSubmitting(false);
 
     if (res.success && res.data) {
+      toast.success(isEditing ? "User updated successfully." : "User created successfully.");
       router.push(`/users/${res.data.id}`);
     } else {
-      setError(res.error || "An unknown error occurred.");
+      const errMsg = res.error || "Unable to save user.";
+      toast.error(errMsg);
+      setError(errMsg);
     }
   }
 
@@ -80,14 +84,14 @@ export function UserForm({ initialData, organizations }: UserFormProps) {
             {error}
           </div>
         )}
-        
+
         <form onSubmit={onSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="name">Full Name <span className="text-red-500">*</span></Label>
               <Input id="name" name="name" defaultValue={initialData?.name} required placeholder="e.g. John Doe" className="bg-muted/30" />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="email">Email Address <span className="text-red-500">*</span></Label>
               <Input id="email" name="email" type="email" defaultValue={initialData?.email} required placeholder="john@company.com" className="bg-muted/30" />
@@ -106,7 +110,6 @@ export function UserForm({ initialData, organizations }: UserFormProps) {
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="PLATFORM_ADMIN">Platform Admin</SelectItem>
                   <SelectItem value="COMPANY_ADMIN">Company Admin</SelectItem>
                   <SelectItem value="QC">Quality Control (QC)</SelectItem>
                 </SelectContent>
@@ -137,12 +140,16 @@ export function UserForm({ initialData, organizations }: UserFormProps) {
           </div>
 
           <div className="flex justify-end pt-4 border-t">
-            <Button type="button" variant="outline" className="mr-3" onClick={() => router.back()}>
+            <Button type="button" variant="outline" className="mr-3" onClick={() => router.back()} disabled={isSubmitting}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              {isEditing ? "Save Changes" : "Create User"}
+              <ButtonLoader 
+                loading={isSubmitting} 
+                label={isEditing ? "Save Changes" : "Create User"} 
+                loadingLabel={isEditing ? "Saving..." : "Creating..."} 
+                icon={<Save className="h-4 w-4" />}
+              />
             </Button>
           </div>
         </form>

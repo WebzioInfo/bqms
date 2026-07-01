@@ -1,6 +1,7 @@
 import { Role } from "@prisma/client";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import prisma from "@/lib/prisma";
 
 export class AuthenticationError extends Error {
   constructor(message = "Authentication required") {
@@ -26,18 +27,34 @@ export type AuthenticatedUser = {
 
 export async function getAuthenticatedUser(): Promise<AuthenticatedUser> {
   const session = await getServerSession(authOptions);
-  const user = (session as any)?.user;
+  const sessionUser = (session as any)?.user;
 
-  if (!user?.id || !user?.role) {
+  console.log("[DEBUG AUTH] Current Session User:", sessionUser);
+
+  if (!sessionUser?.id || !sessionUser?.role) {
+    console.error("[DEBUG AUTH] Authentication failed: sessionUser is missing id or role", sessionUser);
     throw new AuthenticationError();
   }
 
+  console.log("[DEBUG AUTH] Searching User By ID:", sessionUser.id);
+  const dbUser = await prisma.user.findUnique({
+    where: { id: sessionUser.id },
+    select: { id: true, organizationId: true, role: true, name: true, email: true }
+  });
+
+  console.log("[DEBUG AUTH] Query Result Found:", !!dbUser, "dbUser:", dbUser);
+
+  if (!dbUser) {
+    console.error("[DEBUG AUTH] DB User NOT found for ID:", sessionUser.id);
+    throw new AuthenticationError(`User not found in database. Searched ID: ${sessionUser.id}`);
+  }
+
   return {
-    id: user.id,
-    role: user.role as Role,
-    organizationId: user.organizationId ?? null,
-    name: user.name ?? null,
-    email: user.email ?? null,
+    id: sessionUser.id,
+    role: dbUser.role as Role,
+    organizationId: dbUser.organizationId ?? null,
+    name: dbUser.name ?? null,
+    email: dbUser.email ?? null,
   };
 }
 

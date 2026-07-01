@@ -2,12 +2,17 @@ import { ApiProductForm } from "../components/api-product-form";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getAuthenticatedUser } from "@/lib/auth/tenant-access";
+import { redirect } from "next/navigation";
 
 export default async function NewApiProductPage() {
-  const session = await getServerSession(authOptions);
-  const currentUserId = (session?.user as any)?.id || "unknown";
+  let user;
+  try {
+    user = await getAuthenticatedUser();
+  } catch (error) {
+    redirect("/login");
+  }
+  const currentUserId = user.id;
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto animate-in fade-in duration-500">

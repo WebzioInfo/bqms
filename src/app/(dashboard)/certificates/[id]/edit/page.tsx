@@ -4,16 +4,24 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { getCertificateById } from "@/app/actions/certificate";
 import { getOrganizations } from "@/app/actions/organization";
+import { getTestReports } from "@/app/actions/report";
 import { notFound } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getAuthenticatedUser } from "@/lib/auth/tenant-access";
+import { redirect } from "next/navigation";
 
 export default async function EditCertificatePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [certResult, orgResult, session] = await Promise.all([
+  let user;
+  try {
+    user = await getAuthenticatedUser();
+  } catch (error) {
+    redirect("/login");
+  }
+
+  const [certResult, orgResult, reportsResult] = await Promise.all([
     getCertificateById(id),
     getOrganizations(),
-    getServerSession(authOptions)
+    getTestReports()
   ]);
 
   if (!certResult.success || !certResult.data) {
@@ -21,7 +29,8 @@ export default async function EditCertificatePage({ params }: { params: Promise<
   }
 
   const organizations = orgResult.success ? orgResult.data : [];
-  const currentUserId = (session?.user as any)?.id || "unknown";
+  const reports = reportsResult.success ? reportsResult.data : [];
+  const currentUserId = user.id;
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto animate-in fade-in duration-500">
@@ -37,7 +46,12 @@ export default async function EditCertificatePage({ params }: { params: Promise<
         </div>
       </div>
 
-      <CertificateForm initialData={certResult.data} organizations={organizations || []} currentUserId={currentUserId} />
+      <CertificateForm 
+        initialData={certResult.data} 
+        organizations={organizations || []} 
+        reports={reports || []} 
+        currentUserId={currentUserId} 
+      />
     </div>
   );
 }

@@ -1,35 +1,53 @@
 import { ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import { LogoutButton } from "@/components/LogoutButton";
 import { SidebarNav } from "@/components/ui/sidebar";
 import { Role } from "@prisma/client";
 import { NotificationCenter } from "@/components/NotificationCenter";
+import prisma from "@/lib/prisma";
+import { getAuthenticatedUser } from "@/lib/auth/tenant-access";
 
-type DashboardSession = {
-  user?: {
-    role?: Role;
-  };
-};
+import { ToastProvider } from "@/components/ui/toast-context";
+import { LoadingProvider } from "@/components/ui/loading-context";
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
-  
-  if (!session) {
-    redirect("/login");
+  let user;
+  try {
+    user = await getAuthenticatedUser();
+  } catch (error) {
+    console.error("[DEBUG AUTH] layout.tsx - failed to get authenticated user, redirecting to clear stale session:", error);
+    redirect("/api/auth/clear-stale-session");
   }
 
-  const userRole = (session as DashboardSession).user?.role || Role.QC;
+  const userRole = user.role || Role.QC;
   const roleLabel = userRole.replace("_", " ").toLowerCase();
 
+  let organizationName = "";
+
+  // Enforce correct organization context for Company Admins
+  const actualOrgId = user.organizationId;
+  if (userRole === Role.COMPANY_ADMIN && !actualOrgId) {
+    console.error(`[AUDIT ERROR] COMPANY_ADMIN ${user.email} is missing an organization association. Redirecting to clear stale session.`);
+    redirect("/api/auth/clear-stale-session");
+  }
+
+  if (actualOrgId) {
+    const org = await prisma.organization.findUnique({
+      where: { id: actualOrgId },
+      select: { id: true, name: true }
+    });
+    organizationName = org?.name || "";
+  }
+
   return (
-    <div className="flex min-h-screen w-full flex-col bg-muted/30">
+    <LoadingProvider>
+      <ToastProvider>
+        <div className="flex min-h-screen w-full flex-col bg-muted/30">
       <aside className="fixed inset-y-0 left-0 z-10 hidden w-64 flex-col border-r bg-card sm:flex shadow-sm">
         <div className="flex h-16 items-center border-b px-6">
           <Link href="/" className="flex items-center gap-2 font-bold font-heading">
@@ -45,12 +63,29 @@ export default async function DashboardLayout({
         </div>
       </aside>
       <div className="flex min-h-screen flex-col sm:pl-64">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/90 px-4 backdrop-blur-md sm:h-16 sm:px-6">
-          <div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
-            <div className="ml-auto flex items-center gap-3">
+        <header className="sticky top-0 z-30 flex h-14 items-center border-b bg-background/90 px-4 backdrop-blur-md sm:h-16 sm:px-6 shadow-sm select-none">
+          <div className="flex w-full items-center justify-between">
+            {/* Left side: Company / Org name */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tenant:</span>
+              <span className="text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg">
+                {organizationName || "Platform Administration"}
+              </span>
+            </div>
+
+            {/* Right side: Notifications & User profile info */}
+            <div className="flex items-center gap-4">
               <NotificationCenter />
-              <div className="rounded-md border bg-card px-3 py-1.5 text-sm font-medium capitalize text-foreground shadow-sm">
-                {roleLabel}
+              
+              <div className="flex items-center gap-2 border-l border-slate-200 pl-4">
+                <div className="flex flex-col text-right">
+                  <span className="text-xs font-bold text-slate-800">{user.name || user.email}</span>
+                  <span className="text-[9px] font-bold text-slate-400 tracking-wide">{user.email}</span>
+                </div>
+                
+                <div className="rounded-md border bg-card px-3 py-1 text-[9px] font-black uppercase tracking-wider text-slate-650 shadow-sm border-slate-200">
+                  {roleLabel}
+                </div>
               </div>
             </div>
           </div>
@@ -60,5 +95,7 @@ export default async function DashboardLayout({
         </main>
       </div>
     </div>
+  </ToastProvider>
+</LoadingProvider>
   );
 }

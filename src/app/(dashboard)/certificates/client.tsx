@@ -23,7 +23,7 @@ export function CertificatesClient({ data }: CertificatesClientProps) {
           </div>
           <div>
             <span className="font-semibold block">{cert.certificateNumber}</span>
-            <span className="text-xs text-muted-foreground truncate max-w-[150px] inline-block">Batch: {cert.batchNumber || "Unknown"}</span>
+            <span className="text-xs text-muted-foreground truncate max-w-[150px] inline-block">Report: {cert.reportNumber || "Unknown"}</span>
           </div>
         </div>
       )

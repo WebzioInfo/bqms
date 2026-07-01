@@ -2,17 +2,12 @@ import { getDashboardMetrics } from "@/app/actions/dashboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, Beaker, ShieldCheck, Database, AlertCircle, AlertTriangle } from "lucide-react";
 import Link from "next/link";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import { Role } from "@prisma/client";
 import { getPendingLabTestsForDashboard } from "@/app/actions/reminder";
+import { getAuthenticatedUser } from "@/lib/auth/tenant-access";
 
-type SessionWithRole = {
-  user?: {
-    role?: Role;
-  };
-};
+
 
 type RecentDashboardReport = {
   id: string;
@@ -22,10 +17,14 @@ type RecentDashboardReport = {
 };
 
 export default async function DashboardPage() {
-  const session = await getServerSession(authOptions);
-  if (!session) redirect("/login");
+  let user;
+  try {
+    user = await getAuthenticatedUser();
+  } catch (error) {
+    redirect("/login");
+  }
 
-  const role = (session as SessionWithRole).user?.role;
+  const role = user.role;
   const [{ data: metrics }, { data: pendingTests }] = await Promise.all([
     getDashboardMetrics(),
     getPendingLabTestsForDashboard()

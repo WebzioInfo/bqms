@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getAuthenticatedUser } from "@/lib/auth/tenant-access";
 import prisma from "@/lib/prisma";
 import { ReportGeneratorService, ReportData } from "@/lib/reports";
 import { format } from "date-fns";
@@ -11,8 +10,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    let user;
+    try {
+      user = await getAuthenticatedUser();
+    } catch (e) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
@@ -31,6 +32,11 @@ export async function GET(
 
     if (!report) {
       return new NextResponse("Report not found", { status: 404 });
+    }
+
+    // Tenant check
+    if (user.role !== "PLATFORM_ADMIN" && user.organizationId !== report.organizationId) {
+      return new NextResponse("Forbidden", { status: 403 });
     }
 
     const org = await prisma.organization.findUnique({
