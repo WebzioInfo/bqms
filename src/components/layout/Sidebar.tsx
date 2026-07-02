@@ -88,7 +88,7 @@ export function Sidebar({ user, roleLabel, role }: { user: any; roleLabel: strin
                   return (
                     <Tooltip.Provider key={item.name} delay={200}>
                       <Tooltip.Root>
-                        <Tooltip.Trigger asChild>{linkContent}</Tooltip.Trigger>
+                        <Tooltip.Trigger render={linkContent} />
                         <Tooltip.Portal>
                           <Tooltip.Positioner side="right" sideOffset={8}>
                             <Tooltip.Popup className="z-50 px-2 py-1 text-xs font-medium text-white bg-slate-900 rounded-md shadow-md">
