@@ -80,7 +80,7 @@ export async function GET(
         // Default display rules
         if (param.category === "MICROBIOLOGY") {
           displayVal = "Not Entered";
-        } else if (param.unit === "Descriptor" || param.id === "Odour" || param.id === "Taste") {
+        } else if (param.unit === "Descriptor" || param.id === "Colour" || param.id === "Odour" || param.id === "Taste") {
           displayVal = "—";
         } else {
           displayVal = "0";

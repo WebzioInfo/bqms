@@ -33,7 +33,7 @@ export const STATIC_PARAMETERS: ParameterDef[] = [
   { id: "TDS", name: "TDS", category: "PHYSICAL", unit: "mg/L", minAcceptable: 0, maxAcceptable: 500 },
   { id: "Turbidity", name: "Turbidity", category: "PHYSICAL", unit: "NTU", minAcceptable: 0, maxAcceptable: 1 },
   { id: "Sulphate", name: "Sulphate", category: "CHEMICAL", unit: "mg/L", minAcceptable: 0, maxAcceptable: 200 },
-  { id: "Colour", name: "Colour", category: "PHYSICAL", unit: "Hazen", minAcceptable: 0, maxAcceptable: 5 },
+  { id: "Colour", name: "Colour", category: "PHYSICAL", unit: "Descriptor", minAcceptable: 0, maxAcceptable: 0 },
   { id: "Odour", name: "Odour", category: "PHYSICAL", unit: "Descriptor", minAcceptable: 0, maxAcceptable: 0 },
   { id: "Taste", name: "Taste", category: "PHYSICAL", unit: "Descriptor", minAcceptable: 0, maxAcceptable: 0 },
   { id: "Residual Free Chlorine", name: "Residual Free Chlorine", category: "CHEMICAL", unit: "mg/L", minAcceptable: 0.2, maxAcceptable: 1.0 },

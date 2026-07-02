@@ -61,7 +61,7 @@ export function ReportDetailClient({ report }: ReportDetailClientProps) {
           // Default display rules
           if (p.category === "MICROBIOLOGY") {
             displayVal = "Not Entered";
-          } else if (p.unit === "Descriptor" || p.id === "Odour" || p.id === "Taste") {
+          } else if (p.unit === "Descriptor" || p.id === "Colour" || p.id === "Odour" || p.id === "Taste") {
             displayVal = "—";
           } else {
             displayVal = "0"; // Numeric

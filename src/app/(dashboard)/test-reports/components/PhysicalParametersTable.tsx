@@ -1,5 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ParameterDef, ReportFormData } from "./types";
 import { CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 
@@ -29,7 +30,7 @@ export function PhysicalParametersTable({ parameters, data, updateResult, disabl
   };
 
   const isTextParam = (param: ParameterDef) => {
-    return param.unit === "Descriptor" || param.id === "Odour" || param.id === "Taste";
+    return param.unit === "Descriptor" || param.id === "Colour" || param.id === "Odour" || param.id === "Taste";
   };
 
   const getDefaultValue = (param: ParameterDef) => {
@@ -67,15 +68,31 @@ export function PhysicalParametersTable({ parameters, data, updateResult, disabl
                 <tr key={param.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-3 font-medium text-slate-700">{param.name}</td>
                   <td className="px-6 py-3">
-                    <Input
-                      type={disabled ? "text" : "number"}
-                      step="any"
-                      placeholder="0.00"
-                      value={displayValue}
-                      onChange={(e) => updateResult(param.id, e.target.value)}
-                      className="w-full max-w-[150px] focus:ring-blue-500 h-9"
-                      disabled={disabled}
-                    />
+                    {isTextParam(param) ? (
+                      <Select
+                        value={displayValue === "—" || !displayValue ? undefined : displayValue}
+                        onValueChange={(value) => updateResult(param.id, "", value)}
+                        disabled={disabled}
+                      >
+                        <SelectTrigger className="w-full max-w-[150px] focus:ring-blue-500 h-9 bg-white">
+                          <SelectValue placeholder="Select Value" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Agreeable">Agreeable</SelectItem>
+                          <SelectItem value="Not Agreeable">Not Agreeable</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        type={disabled ? "text" : "number"}
+                        step="any"
+                        placeholder="0.00"
+                        value={displayValue}
+                        onChange={(e) => updateResult(param.id, e.target.value)}
+                        className="w-full max-w-[150px] focus:ring-blue-500 h-9"
+                        disabled={disabled}
+                      />
+                    )}
                   </td>
                   <td className="px-6 py-3 text-slate-500">{param.unit}</td>
                   <td className="px-6 py-3 text-slate-500">{getStandardString(param)}</td>

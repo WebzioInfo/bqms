@@ -41,9 +41,8 @@ export const MASTER_PARAMETER_CONFIGS: MasterParameterConfig[] = [
   },
   {
     parameter: "Colour",
-    type: "NUMERIC",
-    pass: { min: 0, max: 5 },
-    fail: { above: 15 }
+    type: "TEXT",
+    passText: ["agreeable"]
   },
   {
     parameter: "Residual Free Chlorine",
@@ -66,14 +65,12 @@ export const MASTER_PARAMETER_CONFIGS: MasterParameterConfig[] = [
   {
     parameter: "Odour",
     type: "TEXT",
-    passText: ["agreeable", "unobjectionable"],
-    warningText: ["mild", "slight"]
+    passText: ["agreeable"]
   },
   {
     parameter: "Taste",
     type: "TEXT",
-    passText: ["agreeable", "unobjectionable"],
-    warningText: ["mild", "slight"]
+    passText: ["agreeable"]
   },
 
   // Microbiological (Pathogens)
