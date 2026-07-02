@@ -70,7 +70,7 @@ export function PhysicalParametersTable({ parameters, data, updateResult, disabl
                   <td className="px-6 py-3">
                     {isTextParam(param) ? (
                       <Select
-                        value={displayValue === "—" || !displayValue ? undefined : displayValue}
+                        value={displayValue === "—" || !displayValue ? "" : displayValue}
                         onValueChange={(value) => updateResult(param.id, "", value)}
                         disabled={disabled}
                       >
