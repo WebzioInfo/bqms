@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ReportFormData, ParameterDef, STATIC_PARAMETERS, ResultValue } from "./types";
@@ -135,11 +135,11 @@ export function ReportForm({ organizationId, initialData, disabled = false }: Pr
     return () => clearTimeout(delayDebounceFn);
   }, [formData.results]);
 
-  const updateData = (updates: Partial<ReportFormData>) => {
+  const updateData = useCallback((updates: Partial<ReportFormData>) => {
     setFormData(prev => ({ ...prev, ...updates }));
-  };
+  }, []);
 
-  const updateResult = (parameterId: string, value: string, stringValue: string = "") => {
+  const updateResult = useCallback((parameterId: string, value: string, stringValue: string = "") => {
     setFormData(prev => ({
       ...prev,
       results: {
@@ -152,7 +152,7 @@ export function ReportForm({ organizationId, initialData, disabled = false }: Pr
         }
       }
     }));
-  };
+  }, []);
 
   const handleSave = async (status: "DRAFT" | "SUBMITTED") => {
     // Validation

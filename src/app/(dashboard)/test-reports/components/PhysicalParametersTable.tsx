@@ -12,7 +12,9 @@ interface Props {
   evaluatedStatuses: Record<string, "PASS" | "WARNING" | "FAIL" | "PENDING">;
 }
 
-export function PhysicalParametersTable({ parameters, data, updateResult, disabled = false, evaluatedStatuses }: Props) {
+import React from "react";
+
+export const PhysicalParametersTable = React.memo(function PhysicalParametersTable({ parameters, data, updateResult, disabled = false, evaluatedStatuses }: Props) {
   const physicalParams = parameters.filter(
     (p) => p.category === "PHYSICAL" || p.category === "CHEMICAL"
   );
@@ -71,7 +73,7 @@ export function PhysicalParametersTable({ parameters, data, updateResult, disabl
                     {isTextParam(param) ? (
                       <Select
                         value={displayValue === "—" || !displayValue ? "" : displayValue}
-                        onValueChange={(value) => updateResult(param.id, "", value)}
+                        onValueChange={(value) => updateResult(param.id, "", value || "")}
                         disabled={disabled}
                       >
                         <SelectTrigger className="w-full max-w-[150px] focus:ring-blue-500 h-9 bg-white">
@@ -133,4 +135,4 @@ export function PhysicalParametersTable({ parameters, data, updateResult, disabl
       </div>
     </div>
   );
-}
+});

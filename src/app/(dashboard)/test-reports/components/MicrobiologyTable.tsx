@@ -12,7 +12,9 @@ interface Props {
   evaluatedStatuses: Record<string, "PASS" | "WARNING" | "FAIL" | "PENDING">;
 }
 
-export function MicrobiologyTable({ parameters, data, updateResult, disabled = false, evaluatedStatuses }: Props) {
+import React from "react";
+
+export const MicrobiologyTable = React.memo(function MicrobiologyTable({ parameters, data, updateResult, disabled = false, evaluatedStatuses }: Props) {
   const microParams = parameters.filter((p) => p.category === "MICROBIOLOGY");
 
   const getStandardString = (param: ParameterDef) => {
@@ -123,4 +125,4 @@ export function MicrobiologyTable({ parameters, data, updateResult, disabled = f
       </div>
     </div>
   );
-}
+});
