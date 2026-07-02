@@ -47,6 +47,15 @@ export default function RootLayout({
             }
           `}
         </Script>
+        <Script id="sidebar-state" strategy="beforeInteractive">
+          {`
+            if (typeof window !== 'undefined') {
+              if (localStorage.getItem('sidebar-collapsed') === 'true') {
+                document.documentElement.classList.add('sidebar-collapsed');
+              }
+            }
+          `}
+        </Script>
         {children}
       </body>
     </html>
