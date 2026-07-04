@@ -7,6 +7,7 @@ import Link from "next/link";
 import { ArrowLeft, Edit, Printer } from "lucide-react";
 import { ReportForm } from "../components/report-form";
 import { STATIC_PARAMETERS } from "../components/types";
+import { generateReportDefinition } from "@/lib/pdf";
 
 interface ReportDetailClientProps {
   report: any;
@@ -81,33 +82,11 @@ export function ReportDetailClient({ report }: ReportDetailClientProps) {
         return [p.name, p.category, displayVal, p.unit || "", standardStr, statusStr];
       });
 
-      const documentDefinition: any = {
-        content: [
-          { text: "WATER QUALITY CONTROL TEST CERTIFICATE", style: "header" },
-          { text: "\n" }
-        ],
-        styles: {
-          header: { fontSize: 18, bold: true, alignment: "center" },
-          tableHeader: { bold: true, fillColor: "#f2f2f2" }
-        }
-      };
-
-      Object.entries(metadata).forEach(([k, v]) => {
-        documentDefinition.content.push({ text: `${k}: ${v}`, margin: [0, 0, 0, 5] });
-      });
-      documentDefinition.content.push({ text: "\n" });
-
-      const tableBody = [
-        headers.map(h => ({ text: h, style: "tableHeader" })),
-        ...rows.map(row => row.map((cell: any) => String(cell || "")))
-      ];
-
-      documentDefinition.content.push({
-        table: {
-          headerRows: 1,
-          widths: Array(headers.length).fill("*"),
-          body: tableBody
-        }
+      const documentDefinition = generateReportDefinition({
+        title: "WATER QUALITY CONTROL TEST CERTIFICATE",
+        metadata,
+        headers,
+        rows
       });
 
       // Let pdfmake handle the download directly in the browser

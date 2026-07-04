@@ -3,21 +3,26 @@ import { Parser } from 'json2csv';
 import { Builder } from 'xml2js';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
+import { generateReportDefinition } from './pdf';
 
-// Setup pdfMake fonts
-// @ts-ignore
+// Setup pdfMake fonts by mutating the existing objects in-place
 if (pdfMake && pdfFonts) {
+  const vfsObj = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts;
   // @ts-ignore
-  pdfMake.vfs = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts;
+  pdfMake.vfs = pdfMake.vfs || {};
   // @ts-ignore
-  pdfMake.fonts = {
+  Object.assign(pdfMake.vfs, vfsObj);
+  // @ts-ignore
+  pdfMake.fonts = pdfMake.fonts || {};
+  // @ts-ignore
+  Object.assign(pdfMake.fonts, {
     Roboto: {
       normal: 'Roboto-Regular.ttf',
       bold: 'Roboto-Medium.ttf',
       italics: 'Roboto-Italic.ttf',
       bolditalics: 'Roboto-MediumItalic.ttf'
     }
-  };
+  });
 }
 
 export type ExportFormat = 'pdf' | 'xlsx' | 'csv' | 'json' | 'xml';
@@ -125,39 +130,38 @@ export class ReportGeneratorService {
   }
 
   private static async generatePDF(data: ReportData): Promise<Buffer> {
-    const documentDefinition: any = {
-      content: [
-        { text: data.title, style: 'header' },
-        { text: '\n' }
-      ],
-      styles: {
-        header: { fontSize: 18, bold: true, alignment: 'center' },
-        tableHeader: { bold: true, fillColor: '#f2f2f2' }
-      }
-    };
-
-    if (data.metadata) {
-      Object.entries(data.metadata).forEach(([k, v]) => {
-        documentDefinition.content.push({ text: `${k}: ${v}`, margin: [0, 0, 0, 5] });
+    if (pdfMake && pdfFonts) {
+      const vfsObj = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts;
+      pdfMake.vfs = pdfMake.vfs || {};
+      Object.assign(pdfMake.vfs, vfsObj);
+      
+      pdfMake.fonts = pdfMake.fonts || {};
+      Object.assign(pdfMake.fonts, {
+        Roboto: {
+          normal: 'Roboto-Regular.ttf',
+          bold: 'Roboto-Medium.ttf',
+          italics: 'Roboto-Italic.ttf',
+          bolditalics: 'Roboto-MediumItalic.ttf'
+        }
       });
-      documentDefinition.content.push({ text: '\n' });
-    }
-
-    // Add table
-    const tableBody = [
-      data.headers.map(h => ({ text: h, style: 'tableHeader' })),
-      ...data.rows.map(row => row.map((cell: any) => String(cell || '')))
-    ];
-
-    documentDefinition.content.push({
-      table: {
-        headerRows: 1,
-        widths: Array(data.headers.length).fill('*'),
-        body: tableBody
+      
+      // Bind to global scope to support pdfMake internal resolution in server environment
+      if (typeof global !== 'undefined') {
+        // @ts-ignore
+        global.pdfMake = pdfMake;
+        // @ts-ignore
+        global.pdfMake.vfs = pdfMake.vfs;
+        // @ts-ignore
+        global.pdfMake.fonts = pdfMake.fonts;
       }
-    });
-
-    const pdfDocGenerator = pdfMake.createPdf(documentDefinition);
+    }
+    const documentDefinition = generateReportDefinition(data);
+    const pdfDocGenerator = pdfMake.createPdf(
+      documentDefinition,
+      undefined,
+      pdfMake.fonts,
+      pdfMake.vfs
+    );
     const buffer = await pdfDocGenerator.getBuffer();
     return buffer;
   }
