@@ -38,68 +38,65 @@ export function ReportSummaryCard({ data, parameters, evaluatedStatuses }: Props
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "PASS":
-        return <Badge className="bg-emerald-500 hover:bg-emerald-600 px-3 py-1"><CheckCircle2 className="w-4 h-4 mr-1.5" /> PASS</Badge>;
+        return <Badge className="bg-emerald-500 hover:bg-emerald-600 px-2 py-0.5 text-xs"><CheckCircle2 className="w-3.5 h-3.5 mr-1" /> PASS</Badge>;
       case "WARNING":
-        return <Badge className="bg-amber-550 hover:bg-amber-600 px-3 py-1"><AlertCircle className="w-4 h-4 mr-1.5" /> WARNING</Badge>;
+        return <Badge className="bg-amber-550 hover:bg-amber-600 px-2 py-0.5 text-xs"><AlertCircle className="w-3.5 h-3.5 mr-1" /> WARNING</Badge>;
       case "FAIL":
-        return <Badge className="bg-rose-500 hover:bg-rose-600 px-3 py-1"><XCircle className="w-4 h-4 mr-1.5" /> FAIL</Badge>;
+        return <Badge className="bg-rose-500 hover:bg-rose-600 px-2 py-0.5 text-xs"><XCircle className="w-3.5 h-3.5 mr-1" /> FAIL</Badge>;
       default:
-        return <Badge className="bg-slate-500 hover:bg-slate-650 px-3 py-1"><Clock className="w-4 h-4 mr-1.5" /> PENDING</Badge>;
+        return <Badge className="bg-slate-500 hover:bg-slate-650 px-2 py-0.5 text-xs"><Clock className="w-3.5 h-3.5 mr-1" /> PENDING</Badge>;
     }
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden sticky top-6 font-sans">
-      <div className="p-6 bg-gradient-to-br from-slate-800 to-slate-900 text-white">
-        <h2 className="text-xl font-bold mb-4">Summary</h2>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-slate-300 text-sm font-medium">Overall Status</span>
-          {getStatusBadge(overallStatus)}
-        </div>
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden font-sans">
+      <div className="p-3.5 bg-gradient-to-br from-slate-800 to-slate-900 text-white flex items-center justify-between">
+        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-200">Summary</h2>
+        {getStatusBadge(overallStatus)}
       </div>
       
-      <div className="p-6 space-y-4">
-        <div className="flex justify-between items-center py-2 border-b border-slate-100">
-          <span className="text-slate-500 text-sm">Batch Number</span>
-          <span className="font-semibold text-slate-800">{data.batchNumber || "—"}</span>
+      <div className="p-3.5 space-y-2">
+        <div className="flex justify-between items-center py-1 border-b border-slate-100">
+          <span className="text-slate-500 text-xs">Batch Number</span>
+          <span className="font-bold text-slate-800 text-xs">{data.batchNumber || "—"}</span>
         </div>
         
-        <div className="flex justify-between items-center py-2 border-b border-slate-100">
-          <span className="text-slate-500 text-sm">Production Date</span>
-          <span className="font-semibold text-slate-800">{data.productionDate || "—"}</span>
+        <div className="flex justify-between items-center py-1 border-b border-slate-100">
+          <span className="text-slate-500 text-xs">Production Date</span>
+          <span className="font-bold text-slate-800 text-xs">{data.productionDate || "—"}</span>
         </div>
         
-        <div className="flex justify-between items-center py-2 border-b border-slate-100">
-          <span className="text-slate-500 text-sm">Report Type</span>
-          <span className="font-semibold text-slate-800">{data.reportType || "—"}</span>
+        <div className="flex justify-between items-center py-1 border-b border-slate-100">
+          <span className="text-slate-500 text-xs">Report Type</span>
+          <span className="font-bold text-slate-800 text-xs">{data.reportType || "—"}</span>
         </div>
         
-        <div className="grid grid-cols-3 gap-2 py-3">
-          <div className="bg-emerald-50 rounded-lg p-2 border border-emerald-100 text-center">
-            <span className="block text-[10px] text-emerald-600 font-bold uppercase tracking-wider mb-1">Passed</span>
-            <span className="block text-xl font-bold text-emerald-700">{passedCount}</span>
+        <div className="grid grid-cols-3 gap-1.5 py-1.5">
+          <div className="bg-emerald-50 rounded-lg p-1.5 border border-emerald-100 text-center">
+            <span className="block text-[9px] text-emerald-600 font-bold uppercase tracking-wider mb-0.5">Passed</span>
+            <span className="block text-base font-bold text-emerald-700">{passedCount}</span>
           </div>
-          <div className="bg-amber-50 rounded-lg p-2 border border-amber-100 text-center">
-            <span className="block text-[10px] text-amber-650 font-bold uppercase tracking-wider mb-1">Warning</span>
-            <span className="block text-xl font-bold text-amber-700">{warningCount}</span>
+          <div className="bg-amber-50 rounded-lg p-1.5 border border-amber-100 text-center">
+            <span className="block text-[9px] text-amber-650 font-bold uppercase tracking-wider mb-0.5">Warning</span>
+            <span className="block text-base font-bold text-amber-700">{warningCount}</span>
           </div>
-          <div className="bg-rose-50 rounded-lg p-2 border border-rose-100 text-center">
-            <span className="block text-[10px] text-rose-600 font-bold uppercase tracking-wider mb-1">Failed</span>
-            <span className="block text-xl font-bold text-rose-700">{failedCount}</span>
+          <div className="bg-rose-50 rounded-lg p-1.5 border border-rose-100 text-center">
+            <span className="block text-[9px] text-rose-600 font-bold uppercase tracking-wider mb-0.5">Failed</span>
+            <span className="block text-base font-bold text-rose-700">{failedCount}</span>
           </div>
         </div>
 
-        <div className="flex justify-between items-center py-2 border-b border-slate-100">
-          <span className="text-slate-500 text-sm">Microbial Status</span>
-          <span className={`font-semibold ${microFailed > 0 ? "text-rose-600" : microPassed > 0 ? "text-emerald-600" : "text-slate-400"}`}>
+        <div className="flex justify-between items-center py-1 border-b border-slate-100">
+          <span className="text-slate-500 text-xs">Microbial Status</span>
+          <span className={`font-bold text-xs ${microFailed > 0 ? "text-rose-600" : microPassed > 0 ? "text-emerald-600" : "text-slate-400"}`}>
             {microFailed > 0 ? "FAIL" : microPassed > 0 && pendingCount === 0 ? "PASS" : "PENDING"}
           </span>
         </div>
         
         {data.remarks && (
-          <div className="pt-2">
-            <span className="block text-slate-500 text-sm mb-1">Remarks</span>
-            <p className="text-sm text-slate-700 italic line-clamp-3 bg-slate-50 p-3 rounded-lg border border-slate-100">
+          <div className="pt-1">
+            <span className="block text-slate-500 text-[10px] uppercase font-bold tracking-wider mb-0.5">Remarks</span>
+            <p className="text-xs text-slate-700 italic line-clamp-2 bg-slate-50 p-2 rounded-lg border border-slate-100">
               "{data.remarks}"
             </p>
           </div>

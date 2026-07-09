@@ -342,9 +342,8 @@ export function ReportForm({ organizationId, initialData, disabled = false }: Pr
 
         <AttachmentsSection data={formData} updateData={updateData} disabled={disabled} />
       </div>
-      
-      <div className="w-full xl:w-80 flex-shrink-0">
-        <div className="sticky top-6 space-y-6">
+           <div className="w-full xl:w-80 flex-shrink-0">
+        <div className="sticky top-[72px] space-y-4">
           <ReportSummaryCard data={formData} parameters={STATIC_PARAMETERS} evaluatedStatuses={evaluatedStatuses} />
           
           {disabled ? (
@@ -377,30 +376,25 @@ export function ReportForm({ organizationId, initialData, disabled = false }: Pr
               </div>
             </div>
           ) : (
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-3">
+            <div className="bg-white p-3.5 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-2.5">
               <Button 
                 variant="outline" 
-                className="w-full justify-center h-12" 
-                onClick={() => handleSave("DRAFT")}
+                className="w-full justify-center h-10 border-slate-250 hover:bg-slate-50 text-xs font-bold text-slate-600 rounded-lg shadow-sm" 
+                onClick={() => router.push("/test-reports")}
                 disabled={isSaving}
               >
-                <ButtonLoader 
-                  loading={isSaving} 
-                  label="Save Draft" 
-                  loadingLabel="Saving..." 
-                  icon={<Save className="w-4 h-4" />}
-                />
+                Cancel
               </Button>
               <Button 
-                className="w-full justify-center h-12 bg-blue-600 hover:bg-blue-700" 
+                className="w-full justify-center h-10 bg-blue-600 hover:bg-blue-700 text-xs font-bold rounded-lg text-white shadow-md" 
                 onClick={() => handleSave("SUBMITTED")}
                 disabled={isSaving}
               >
                 <ButtonLoader 
                   loading={isSaving} 
-                  label="Submit Report" 
-                  loadingLabel="Submitting..." 
-                  icon={<Send className="w-4 h-4" />}
+                  label={initialData?.id ? "Save Changes" : "Submit Report"} 
+                  loadingLabel={initialData?.id ? "Saving..." : "Submitting..."} 
+                  icon={<Send className="w-3.5 h-3.5" />}
                 />
               </Button>
             </div>
