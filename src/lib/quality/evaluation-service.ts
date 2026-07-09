@@ -47,8 +47,8 @@ export const MASTER_PARAMETER_CONFIGS: MasterParameterConfig[] = [
   {
     parameter: "Residual Free Chlorine",
     type: "NUMERIC",
-    pass: { min: 0.2, max: Infinity },
-    fail: { below: 0.2 }
+    pass: { min: 0, max: 0.2 },
+    fail: { above: 0.2 }
   },
   {
     parameter: "Alkalinity",

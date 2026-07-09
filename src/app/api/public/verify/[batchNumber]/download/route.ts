@@ -124,9 +124,9 @@ export async function GET(
           ? String(param.minAcceptable) 
           : `${param.minAcceptable} - ${param.maxAcceptable}`;
       } else if (param.minAcceptable !== null) {
-        standardStr = `>= ${param.minAcceptable}`;
+        standardStr = `≥ ${param.minAcceptable}`;
       } else if (param.maxAcceptable !== null) {
-        standardStr = `<= ${param.maxAcceptable}`;
+        standardStr = `≤ ${param.maxAcceptable}`;
       }
 
       return [

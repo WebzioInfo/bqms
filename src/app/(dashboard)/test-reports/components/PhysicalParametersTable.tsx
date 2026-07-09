@@ -26,8 +26,8 @@ export const PhysicalParametersTable = React.memo(function PhysicalParametersTab
       }
       return `${param.minAcceptable} – ${param.maxAcceptable}`;
     }
-    if (param.minAcceptable !== null) return `Min ${param.minAcceptable}`;
-    if (param.maxAcceptable !== null) return `Max ${param.maxAcceptable}`;
+    if (param.minAcceptable !== null) return `≥ ${param.minAcceptable}`;
+    if (param.maxAcceptable !== null) return `≤ ${param.maxAcceptable}`;
     return "—";
   };
 

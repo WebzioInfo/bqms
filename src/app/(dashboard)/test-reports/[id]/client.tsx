@@ -78,9 +78,9 @@ export function ReportDetailClient({ report }: ReportDetailClientProps) {
         if (p.minAcceptable !== null && p.maxAcceptable !== null) {
           standardStr = p.minAcceptable === p.maxAcceptable ? String(p.minAcceptable) : `${p.minAcceptable} - ${p.maxAcceptable}`;
         } else if (p.minAcceptable !== null) {
-          standardStr = `>= ${p.minAcceptable}`;
+          standardStr = `≥ ${p.minAcceptable}`;
         } else if (p.maxAcceptable !== null) {
-          standardStr = `<= ${p.maxAcceptable}`;
+          standardStr = `≤ ${p.maxAcceptable}`;
         }
 
         return [p.name, p.category, displayVal, p.unit || "", standardStr, statusStr];

@@ -36,7 +36,7 @@ export const STATIC_PARAMETERS: ParameterDef[] = [
   { id: "Colour", name: "Colour", category: "PHYSICAL", unit: "Descriptor", minAcceptable: 0, maxAcceptable: 0 },
   { id: "Odour", name: "Odour", category: "PHYSICAL", unit: "Descriptor", minAcceptable: 0, maxAcceptable: 0 },
   { id: "Taste", name: "Taste", category: "PHYSICAL", unit: "Descriptor", minAcceptable: 0, maxAcceptable: 0 },
-  { id: "Residual Free Chlorine", name: "Residual Free Chlorine", category: "CHEMICAL", unit: "mg/L", minAcceptable: 0.2, maxAcceptable: null },
+  { id: "Residual Free Chlorine", name: "Residual Free Chlorine", category: "CHEMICAL", unit: "mg/L", minAcceptable: null, maxAcceptable: 0.2 },
   { id: "Alkalinity", name: "Alkalinity", category: "CHEMICAL", unit: "mg/L", minAcceptable: 0, maxAcceptable: 200 },
   { id: "Chloride", name: "Chloride", category: "CHEMICAL", unit: "mg/L", minAcceptable: 0, maxAcceptable: 250 },
 
