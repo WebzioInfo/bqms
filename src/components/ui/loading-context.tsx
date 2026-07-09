@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { LoadingOverlay } from "./LoadingOverlay";
 
@@ -47,7 +47,7 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       setShowOverlayVisible(true);
-    }, 250); // Only show overlay if navigation takes longer than 250ms
+    }, 200); // 200ms delay for visual feedback of slow transitions
   }, []);
 
   // Hide the loading overlay when route navigation is fully complete
@@ -62,7 +62,7 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Intercept all internal anchor clicks
+  // Intercept all internal anchor clicks to start the transition loader immediately
   useEffect(() => {
     const handleLinkClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -102,13 +102,11 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
 
   // Intercept browser back/forward and pushState/replaceState
   useEffect(() => {
-    // 1. Listen for browser Back/Forward (popstate)
     const handlePopState = () => {
       triggerOverlayWithDelay();
     };
     window.addEventListener("popstate", handlePopState);
 
-    // 2. Monkeypatch pushState and replaceState to show loading during programmatic router redirects
     const originalPush = window.history.pushState;
     const originalReplace = window.history.replaceState;
 
@@ -134,6 +132,74 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
       window.history.replaceState = originalReplace;
     };
   }, [triggerOverlayWithDelay]);
+
+  // Intercept Next.js internal RSC fetches to display transition loader during programmatic Next.js navigations (router.push/replace)
+  useEffect(() => {
+    const originalFetch = window.fetch;
+
+    window.fetch = async function (...args) {
+      const url = args[0]?.toString() || "";
+      const options = args[1];
+
+      let isRscFetch = false;
+      let isPrefetch = false;
+
+      // Extract and check headers
+      const headers = options?.headers;
+      if (headers) {
+        if (headers instanceof Headers) {
+          if (headers.has("RSC") || headers.has("rsc")) {
+            isRscFetch = true;
+          }
+          if (
+            headers.get("Purpose") === "prefetch" || 
+            headers.get("X-Next-Router-Prefetch") === "1" ||
+            headers.get("x-next-router-prefetch") === "1"
+          ) {
+            isPrefetch = true;
+          }
+        } else if (typeof headers === "object") {
+          const keys = Object.keys(headers).map(k => k.toLowerCase());
+          if (keys.includes("rsc")) {
+            isRscFetch = true;
+          }
+          if (
+            (headers as Record<string, string>)["Purpose"] === "prefetch" ||
+            (headers as Record<string, string>)["x-next-router-prefetch"] === "1" ||
+            (headers as Record<string, string>)["X-Next-Router-Prefetch"] === "1"
+          ) {
+            isPrefetch = true;
+          }
+        }
+      }
+
+      if (url.includes("_rsc=")) {
+        isRscFetch = true;
+        if (url.includes("prefetch=1")) {
+          isPrefetch = true;
+        }
+      }
+
+      const isNavigation = isRscFetch && !isPrefetch;
+
+      if (isNavigation) {
+        triggerOverlayWithDelay();
+      }
+
+      try {
+        const response = await originalFetch.apply(this, args);
+        return response;
+      } finally {
+        if (isNavigation) {
+          clearOverlayTimer();
+        }
+      }
+    };
+
+    return () => {
+      window.fetch = originalFetch;
+    };
+  }, [triggerOverlayWithDelay, clearOverlayTimer]);
 
   const startLoading = useCallback((key: string) => {
     setLoadingKeys((prev) => {
@@ -178,8 +244,17 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
     }
   }, [triggerOverlayWithDelay, startLoading, stopLoading, clearOverlayTimer]);
 
+  const contextValue = useMemo(() => ({
+    startLoading,
+    stopLoading,
+    isLoading,
+    showOverlay,
+    hideOverlay,
+    wrapPromise
+  }), [startLoading, stopLoading, isLoading, showOverlay, hideOverlay, wrapPromise]);
+
   return (
-    <LoadingContext.Provider value={{ startLoading, stopLoading, isLoading, showOverlay, hideOverlay, wrapPromise }}>
+    <LoadingContext.Provider value={contextValue}>
       {!mounted ? (
         <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-slate-900 select-none animate-pulse">
           <div className="flex flex-col items-center gap-6">
