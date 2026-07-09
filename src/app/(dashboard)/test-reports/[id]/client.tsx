@@ -138,14 +138,12 @@ export function ReportDetailClient({ report }: ReportDetailClientProps) {
               icon={<Printer className="h-3.5 w-3.5 text-slate-500" />}
             />
           </Button>
-          {report.status === "DRAFT" && (
-            <Link href={`/test-reports/${report.id}/edit`}>
-              <Button className="h-8 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-lg px-4 shadow-md flex items-center gap-1.5">
-                <Edit className="h-3.5 w-3.5" />
-                <span>Edit</span>
-              </Button>
-            </Link>
-          )}
+          <Link href={`/test-reports/${report.id}/edit`}>
+            <Button className="h-8 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-lg px-4 shadow-md flex items-center gap-1.5">
+              <Edit className="h-3.5 w-3.5" />
+              <span>Edit</span>
+            </Button>
+          </Link>
         </div>
       </div>
 

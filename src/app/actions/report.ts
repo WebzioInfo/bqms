@@ -146,9 +146,6 @@ export async function updateTestReport(id: string, data: any, userId: string) {
     });
 
     if (!currentReport) return { success: false, error: "Not found" };
-    if (user.role === Role.QC && currentReport.status !== WaterTestStatus.DRAFT) {
-      throw new AuthorizationError("QC users can only edit draft reports.");
-    }
 
     const nextStatus = parseReportStatus(data.status, currentReport.status);
     if (
@@ -409,9 +406,6 @@ export async function updateTestReportWithResults(id: string, data: any, results
       });
 
       if (!currentReport) throw new Error("Report not found or not editable.");
-      if (user.role === Role.QC && currentReport.status !== WaterTestStatus.DRAFT) {
-        throw new Error("QC users can only edit draft reports.");
-      }
 
       const nextStatus = parseReportStatus(data.status, currentReport.status);
       if (

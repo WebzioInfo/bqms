@@ -247,10 +247,7 @@ export function TestReportsClient({ data }: TestReportsClientProps) {
                 <th className="py-3 px-4">Report No</th>
                 <th className="py-3 px-4">Production Date</th>
                 <th className="py-3 px-4">Batch</th>
-                <th className="py-3 px-4">Report Type</th>
                 <th className="py-3 px-4">pH</th>
-                <th className="py-3 px-4">TDS</th>
-                <th className="py-3 px-4">Microbiology</th>
                 <th className="py-3 px-4">Pending Tests</th>
                 <th className="py-3 px-4">Created Date</th>
                 <th className="py-3 px-4">Status</th>
@@ -261,7 +258,7 @@ export function TestReportsClient({ data }: TestReportsClientProps) {
             <tbody>
               {paginatedData.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="py-12 text-center text-slate-400 font-bold text-xs select-none">
+                  <td colSpan={9} className="py-12 text-center text-slate-400 font-bold text-xs select-none">
                     No reports match the selected parameters.
                   </td>
                 </tr>
@@ -269,7 +266,6 @@ export function TestReportsClient({ data }: TestReportsClientProps) {
                 paginatedData.map((report) => {
                   const repNo = report.reportNumber || report.id.substring(0, 8).toUpperCase();
                   const result = getOverallResult(report);
-                  const microStatus = getMicrobiologyStatus(report);
 
                   return (
                     <tr key={report.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors font-sans text-xs">
@@ -285,19 +281,8 @@ export function TestReportsClient({ data }: TestReportsClientProps) {
                       <td className="py-3 px-4 font-bold text-slate-800 font-mono">
                         {report.batchNumber || "N/A"}
                       </td>
-                      <td className="py-3 px-4 text-slate-600 font-bold">
-                        {report.reportType || "Daily"}
-                      </td>
                       <td className="py-3 px-4 text-slate-600 font-mono font-medium">
                         {getParamResult(report, "pH")}
-                      </td>
-                      <td className="py-3 px-4 text-slate-600 font-mono font-medium">
-                        {getParamResult(report, "TDS")}
-                      </td>
-                      <td className="py-3 px-4 select-none">
-                        <span className={`font-semibold ${microStatus === 'PASS' ? 'text-emerald-600' : microStatus === 'FAIL' ? 'text-rose-600' : 'text-slate-400'}`}>
-                          {microStatus}
-                        </span>
                       </td>
                       <td className="py-3 px-4 select-none">
                         {(() => {
@@ -337,19 +322,17 @@ export function TestReportsClient({ data }: TestReportsClientProps) {
                         </Badge>
                       </td>
                       <td className="py-2 px-4 text-right">
-                        <div className="flex justify-end gap-1 select-none">
+                        <div className="flex justify-end gap-2 select-none items-center">
                           <Link href={`/test-reports/${report.id}`}>
                             <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md hover:bg-sky-50 text-slate-500 hover:text-sky-700" title="View Report">
                               <Eye className="h-3.5 w-3.5" />
                             </Button>
                           </Link>
-                          {report.status === "DRAFT" && (
-                            <Link href={`/test-reports/${report.id}/edit`}>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md hover:bg-sky-50 text-slate-500 hover:text-sky-700" title="Edit Report">
-                                <Edit className="h-3.5 w-3.5" />
-                              </Button>
-                            </Link>
-                          )}
+                          <Link href={`/test-reports/${report.id}/edit`}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md hover:bg-sky-50 text-slate-500 hover:text-sky-700" title="Edit Report">
+                              <Edit className="h-3.5 w-3.5" />
+                            </Button>
+                          </Link>
                         </div>
                       </td>
                     </tr>
