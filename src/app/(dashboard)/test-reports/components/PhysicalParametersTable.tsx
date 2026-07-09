@@ -71,15 +71,22 @@ export const PhysicalParametersTable = React.memo(function PhysicalParametersTab
                   <td className="px-6 py-3 font-medium text-slate-700">{param.name}</td>
                   <td className="px-6 py-3">
                     {isTextParam(param) ? (
-                      <Select
+                       <Select
                         value={displayValue === "—" || !displayValue ? "" : displayValue}
-                        onValueChange={(value) => updateResult(param.id, "", value || "")}
+                        onValueChange={(value) => {
+                          if (value === "Clear" || !value) {
+                            updateResult(param.id, "", "");
+                          } else {
+                            updateResult(param.id, "", value);
+                          }
+                        }}
                         disabled={disabled}
                       >
                         <SelectTrigger className="w-full max-w-[150px] focus:ring-blue-500 h-9 bg-white">
                           <SelectValue placeholder="Select Value" />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="Clear">Select Value</SelectItem>
                           <SelectItem value="Agreeable">Agreeable</SelectItem>
                           <SelectItem value="Not Agreeable">Not Agreeable</SelectItem>
                         </SelectContent>

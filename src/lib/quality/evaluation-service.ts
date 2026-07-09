@@ -128,7 +128,14 @@ export function evaluate(
     if (typeof value === "number") {
       val = value;
     } else if (typeof value === "string" && value.trim() !== "") {
-      val = parseFloat(value);
+      const lower = value.toLowerCase().trim();
+      if (lower === "absent") {
+        val = 0;
+      } else if (lower === "present") {
+        val = config.pass ? config.pass.max + 1 : 1;
+      } else {
+        val = parseFloat(value);
+      }
     }
 
     // Ranges for logging

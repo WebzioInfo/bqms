@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ParameterDef, ReportFormData } from "./types";
 import { CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   parameters: ParameterDef[];
@@ -12,15 +13,26 @@ interface Props {
   evaluatedStatuses: Record<string, "PASS" | "WARNING" | "FAIL" | "PENDING">;
 }
 
-import React from "react";
+import React, { useState } from "react";
 
 export const MicrobiologyTable = React.memo(function MicrobiologyTable({ parameters, data, updateResult, disabled = false, evaluatedStatuses }: Props) {
   const microParams = parameters.filter((p) => p.category === "MICROBIOLOGY");
 
+  const [numericModes, setNumericModes] = useState<Record<string, boolean>>(() => {
+    const initialModes: Record<string, boolean> = {};
+    parameters.forEach(p => {
+      const res = data.results[p.id];
+      if (res && res.value !== "" && res.stringValue !== "Absent" && res.stringValue !== "Present") {
+        initialModes[p.id] = true;
+      }
+    });
+    return initialModes;
+  });
+
   const getStandardString = (param: ParameterDef) => {
     if (param.maxAcceptable === 0) return "Absent";
-    if (param.minAcceptable !== null && param.maxAcceptable !== null) {
-      return `Max ${param.maxAcceptable} ${param.unit}`;
+    if (param.maxAcceptable !== null) {
+      return `≤ ${param.maxAcceptable}`;
     }
     return "—";
   };
@@ -31,7 +43,7 @@ export const MicrobiologyTable = React.memo(function MicrobiologyTable({ paramet
         <h2 className="text-xl font-semibold text-slate-800">Microbiological Parameters</h2>
         <p className="text-sm text-slate-500 mt-1">Select Absent/Present or enter numeric value depending on parameter.</p>
       </div>
-      
+
       <div className="overflow-x-auto">
         <table className="w-full text-sm text-left">
           <thead className="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
@@ -46,7 +58,7 @@ export const MicrobiologyTable = React.memo(function MicrobiologyTable({ paramet
           <tbody className="divide-y divide-slate-100">
             {microParams.map((param) => {
               const result = data.results[param.id] || { value: "", stringValue: "" };
-              
+
               // Determine if this is typically a Present/Absent or Numeric parameter
               const isNumericTarget = param.name.includes("Count");
               const status = (evaluatedStatuses && evaluatedStatuses[param.id]) || "PENDING";
@@ -56,22 +68,67 @@ export const MicrobiologyTable = React.memo(function MicrobiologyTable({ paramet
                   <td className="px-6 py-3 font-medium text-slate-700">{param.name}</td>
                   <td className="px-6 py-3">
                     {isNumericTarget ? (
-                      <Input
-                        type={disabled ? "text" : "number"}
-                        step="1"
-                        placeholder="0"
-                        value={result.value !== "" && result.value !== null && result.value !== undefined ? result.value : (disabled ? "Not Entered" : "")}
-                        onChange={(e) => updateResult(param.id, e.target.value, "")}
-                        className="w-full max-w-[150px] focus:ring-blue-500 h-9"
-                        disabled={disabled}
-                      />
+                      numericModes[param.id] ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type={disabled ? "text" : "number"}
+                            step="1"
+                            placeholder="Enter count"
+                            value={result.value !== "" && result.value !== null && result.value !== undefined ? result.value : (disabled ? "Not Entered" : "")}
+                            onChange={(e) => updateResult(param.id, e.target.value, "")}
+                            className="w-full max-w-[120px] focus:ring-blue-500 h-9 bg-white"
+                            disabled={disabled}
+                          />
+                          {!disabled && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setNumericModes(prev => ({ ...prev, [param.id]: false }));
+                                updateResult(param.id, "", "");
+                              }}
+                              className="h-9 px-2 text-slate-500 hover:text-slate-700 text-xs font-semibold"
+                            >
+                              Reset
+                            </Button>
+                          )}
+                        </div>
+                      ) : (
+                        <Select
+                          value={result.stringValue || (result.value === "0" ? "Absent" : result.value === "1" ? "Present" : "") || (disabled ? "Not Entered" : "")}
+                          onValueChange={(val) => {
+                            if (val === "Absent") {
+                              updateResult(param.id, "0", "Absent");
+                            } else if (val === "Present") {
+                              updateResult(param.id, "1", "Present");
+                            } else if (val === "Numeric") {
+                              setNumericModes(prev => ({ ...prev, [param.id]: true }));
+                              updateResult(param.id, "", "");
+                            } else {
+                              updateResult(param.id, "", "");
+                            }
+                          }}
+                          disabled={disabled}
+                        >
+                          <SelectTrigger className="w-full max-w-[150px] focus:ring-blue-500 h-9 bg-white">
+                            <SelectValue placeholder="Select..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Clear">Select...</SelectItem>
+                            <SelectItem value="Absent">Absent</SelectItem>
+                            <SelectItem value="Present">Present</SelectItem>
+                            {!disabled && <SelectItem value="Numeric">Enter Count...</SelectItem>}
+                          </SelectContent>
+                        </Select>
+                      )
                     ) : (
                       <Select
                         value={result.stringValue || (result.value === "0" ? "Absent" : result.value === "1" ? "Present" : "") || (disabled ? "Not Entered" : "")}
                         onValueChange={(val) => {
                           if (val === "Absent") updateResult(param.id, "0", "Absent");
                           else if (val === "Present") updateResult(param.id, "1", "Present");
-                          else updateResult(param.id, "", val || undefined);
+                          else updateResult(param.id, "", "");
                         }}
                         disabled={disabled}
                       >
@@ -79,6 +136,7 @@ export const MicrobiologyTable = React.memo(function MicrobiologyTable({ paramet
                           <SelectValue placeholder="Select..." />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="Clear">Select...</SelectItem>
                           <SelectItem value="Absent">Absent</SelectItem>
                           <SelectItem value="Present">Present</SelectItem>
                           {disabled && <SelectItem value="Not Entered">Not Entered</SelectItem>}
