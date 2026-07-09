@@ -218,9 +218,9 @@ export function ReportForm({ organizationId, initialData, disabled = false }: Pr
   return (
     <div className="flex flex-col xl:flex-row gap-6 mt-6">
       <div className="flex-1 space-y-6">
-        <ProductionInfoSection data={formData} updateData={updateData} disabled={disabled} />
-        <PhysicalParametersTable parameters={STATIC_PARAMETERS} data={formData} updateResult={updateResult} disabled={disabled} evaluatedStatuses={evaluatedStatuses} />
-        <MicrobiologyTable parameters={STATIC_PARAMETERS} data={formData} updateResult={updateResult} disabled={disabled} evaluatedStatuses={evaluatedStatuses} />
+        <ProductionInfoSection data={formData} updateData={updateData} disabled={disabled || isSaving} />
+        <PhysicalParametersTable parameters={STATIC_PARAMETERS} data={formData} updateResult={updateResult} disabled={disabled || isSaving} evaluatedStatuses={evaluatedStatuses} />
+        <MicrobiologyTable parameters={STATIC_PARAMETERS} data={formData} updateResult={updateResult} disabled={disabled || isSaving} evaluatedStatuses={evaluatedStatuses} />
         
         {/* Pending Laboratory Tests Card (only visible in disabled/view mode) */}
         {disabled && initialData?.pendingTests && initialData.pendingTests.length > 0 && (

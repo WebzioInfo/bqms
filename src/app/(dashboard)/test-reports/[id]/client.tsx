@@ -9,6 +9,7 @@ import { ReportForm } from "../components/report-form";
 import { STATIC_PARAMETERS } from "../components/types";
 import { generateReportDefinition } from "@/lib/pdf";
 import { ButtonLoader } from "@/components/ui/button-loader";
+import { useLoading } from "@/components/ui/loading-context";
 
 interface ReportDetailClientProps {
   report: any;
@@ -16,10 +17,12 @@ interface ReportDetailClientProps {
 
 export function ReportDetailClient({ report }: ReportDetailClientProps) {
   const [isGenerating, setIsGenerating] = useState(false);
+  const { wrapPromise } = useLoading();
 
   const handleDownloadPDF = async () => {
     setIsGenerating(true);
-    try {
+    await wrapPromise((async () => {
+      try {
       // Dynamically import pdfmake to avoid bloating the client bundle and fix Node.js issues
       const pdfMakeModule = await import("pdfmake/build/pdfmake");
       const pdfFontsModule = await import("pdfmake/build/vfs_fonts");
@@ -99,9 +102,9 @@ export function ReportDetailClient({ report }: ReportDetailClientProps) {
     } catch (err) {
       console.error("Failed to generate PDF:", err);
       alert("Failed to generate PDF. Please try again.");
-    } finally {
-      setIsGenerating(false);
     }
+    })(), "Generating PDF...");
+    setIsGenerating(false);
   };
 
   return (

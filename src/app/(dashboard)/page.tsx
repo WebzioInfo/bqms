@@ -6,8 +6,8 @@ import { redirect } from "next/navigation";
 import { Role } from "@prisma/client";
 import { getPendingLabTestsForDashboard } from "@/app/actions/reminder";
 import { getAuthenticatedUser } from "@/lib/auth/tenant-access";
-
-
+import { Suspense } from "react";
+import { CardSkeleton, ListSkeleton } from "@/components/ui/skeletons";
 
 type RecentDashboardReport = {
   id: string;
@@ -25,10 +25,6 @@ export default async function DashboardPage() {
   }
 
   const role = user.role;
-  const [{ data: metrics }, { data: pendingTests }] = await Promise.all([
-    getDashboardMetrics(),
-    getPendingLabTestsForDashboard()
-  ]);
 
   return (
     <div className="flex-1 space-y-4">
@@ -36,6 +32,34 @@ export default async function DashboardPage() {
         <h2 className="text-3xl font-bold tracking-tight">Dashboard Overview</h2>
       </div>
       
+      <Suspense fallback={
+        <div className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mt-4">
+            <div className="col-span-4"><ListSkeleton items={4} /></div>
+            <div className="col-span-3"><ListSkeleton items={4} /></div>
+          </div>
+        </div>
+      }>
+        <DashboardContent role={role} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function DashboardContent({ role }: { role: string }) {
+  const [{ data: metrics }, { data: pendingTests }] = await Promise.all([
+    getDashboardMetrics(),
+    getPendingLabTestsForDashboard()
+  ]);
+
+  return (
+    <>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {role === "PLATFORM_ADMIN" && (
           <Card>
@@ -155,7 +179,7 @@ export default async function DashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 border-b">
             <div>
               <CardTitle className="text-sm font-bold text-slate-800">Pending Laboratory Results</CardTitle>
-              <p className="text-[10px] text-slate-400 font-bold mt-0.5 uppercase tracking-wider">Microbiology incubation tracking</p>
+              <p className="text-[10px] text-slate-400 font-bold mt-0.5 uppercase tracking-wider">Microbiology tracking</p>
             </div>
             <div className="text-[10px] font-black text-slate-500 bg-slate-100 border px-2 py-0.5 rounded">
               {pendingTests?.length || 0} Pending
@@ -199,6 +223,6 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </>
   );
 }

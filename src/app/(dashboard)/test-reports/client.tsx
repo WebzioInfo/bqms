@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
 import { FileText, Eye, Edit, Printer, Search, Calendar, User, SlidersHorizontal, Download } from "lucide-react";
+import { PremiumSpinner } from "@/components/ui/Spinner";
 
 interface TestReportsClientProps {
   data: any[];
@@ -21,6 +22,7 @@ export function TestReportsClient({ data }: TestReportsClientProps) {
   const [batchFilter, setBatchFilter] = useState("");
   const [dateFromFilter, setDateFromFilter] = useState("");
   const [dateToFilter, setDateToFilter] = useState("");
+  const [isFiltering, setIsFiltering] = useState(false);
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -86,6 +88,19 @@ export function TestReportsClient({ data }: TestReportsClientProps) {
   React.useEffect(() => {
     setCurrentPage(1);
   }, [search, reportTypeFilter, statusFilter, batchFilter, dateFromFilter, dateToFilter, pageSize]);
+
+  const triggerFilterLoader = useCallback(() => {
+    setIsFiltering(true);
+    const timer = setTimeout(() => {
+      setIsFiltering(false);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const cancel = triggerFilterLoader();
+    return cancel;
+  }, [search, reportTypeFilter, statusFilter, batchFilter, dateFromFilter, dateToFilter, resultFilter, currentPage, pageSize, triggerFilterLoader]);
 
   const statusVariants: Record<string, string> = {
     "DRAFT": "bg-gray-150 text-gray-700 border-gray-200",
@@ -239,7 +254,15 @@ export function TestReportsClient({ data }: TestReportsClientProps) {
       </div>
 
       {/* Main Table Register */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm relative">
+        {isFiltering && (
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 flex items-center justify-center animate-in fade-in duration-150 select-none">
+            <div className="flex items-center gap-3 bg-white border border-slate-200/80 px-4 py-2.5 rounded-xl shadow-lg animate-in zoom-in-95 duration-150">
+              <PremiumSpinner size="h-5 w-5" />
+              <span className="text-xs font-bold text-slate-750 tracking-tight">Updating List...</span>
+            </div>
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>

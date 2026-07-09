@@ -23,6 +23,7 @@ export const viewport: Viewport = {
   themeColor: "#0f172a",
 };
 
+import { Suspense } from "react";
 import { LoadingProvider } from "@/components/ui/loading-context";
 
 export default function RootLayout({
@@ -58,9 +59,11 @@ export default function RootLayout({
             }
           `}
         </Script>
-        <LoadingProvider>
-          {children}
-        </LoadingProvider>
+        <Suspense fallback={null}>
+          <LoadingProvider>
+            {children}
+          </LoadingProvider>
+        </Suspense>
       </body>
     </html>
   );
