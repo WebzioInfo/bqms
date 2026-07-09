@@ -7,7 +7,7 @@ import { generateReportDefinition } from './pdf';
 
 // Setup pdfMake fonts by mutating the existing objects in-place
 if (pdfMake && pdfFonts) {
-  const vfsObj = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts;
+  const vfsObj = (pdfFonts as any).pdfMake ? (pdfFonts as any).pdfMake.vfs : pdfFonts;
   // @ts-ignore
   pdfMake.vfs = pdfMake.vfs || {};
   // @ts-ignore
@@ -130,13 +130,14 @@ export class ReportGeneratorService {
   }
 
   private static async generatePDF(data: ReportData): Promise<Buffer> {
-    if (pdfMake && pdfFonts) {
-      const vfsObj = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts;
-      pdfMake.vfs = pdfMake.vfs || {};
-      Object.assign(pdfMake.vfs, vfsObj);
+    const pm = pdfMake as any;
+    if (pm && pdfFonts) {
+      const vfsObj = (pdfFonts as any).pdfMake ? (pdfFonts as any).pdfMake.vfs : pdfFonts;
+      pm.vfs = pm.vfs || {};
+      Object.assign(pm.vfs, vfsObj);
       
-      pdfMake.fonts = pdfMake.fonts || {};
-      Object.assign(pdfMake.fonts, {
+      pm.fonts = pm.fonts || {};
+      Object.assign(pm.fonts, {
         Roboto: {
           normal: 'Roboto-Regular.ttf',
           bold: 'Roboto-Medium.ttf',
@@ -148,19 +149,19 @@ export class ReportGeneratorService {
       // Bind to global scope to support pdfMake internal resolution in server environment
       if (typeof global !== 'undefined') {
         // @ts-ignore
-        global.pdfMake = pdfMake;
+        global.pdfMake = pm;
         // @ts-ignore
-        global.pdfMake.vfs = pdfMake.vfs;
+        global.pdfMake.vfs = pm.vfs;
         // @ts-ignore
-        global.pdfMake.fonts = pdfMake.fonts;
+        global.pdfMake.fonts = pm.fonts;
       }
     }
     const documentDefinition = generateReportDefinition(data);
-    const pdfDocGenerator = pdfMake.createPdf(
+    const pdfDocGenerator = pm.createPdf(
       documentDefinition,
       undefined,
-      pdfMake.fonts,
-      pdfMake.vfs
+      pm.fonts,
+      pm.vfs
     );
     const buffer = await pdfDocGenerator.getBuffer();
     return buffer;
