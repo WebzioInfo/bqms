@@ -8,7 +8,6 @@ import prisma from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth/tenant-access";
 
 import { ToastProvider } from "@/components/ui/toast-context";
-import { LoadingProvider } from "@/components/ui/loading-context";
 
 export default async function DashboardLayout({
   children,
@@ -44,33 +43,31 @@ export default async function DashboardLayout({
   }
 
   return (
-    <LoadingProvider>
-      <ToastProvider>
-        <div className="flex min-h-screen w-full flex-col bg-muted/30">
-      <Sidebar user={user} roleLabel={roleLabel} role={userRole} />
-      <div className="flex min-h-screen flex-col sm:pl-[var(--sidebar-width)] transition-[padding] duration-300 ease-in-out">
-        <header className="sticky top-0 z-30 flex h-14 items-center border-b bg-background/90 px-4 backdrop-blur-md sm:h-16 sm:px-6 shadow-sm select-none">
-          <div className="flex w-full items-center justify-between">
-            {/* Left side: Company / Org name */}
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tenant:</span>
-              <span className="text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg">
-                {organizationName || "Platform Administration"}
-              </span>
-            </div>
+    <ToastProvider>
+      <div className="flex min-h-screen w-full flex-col bg-muted/30">
+        <Sidebar user={user} roleLabel={roleLabel} role={userRole} />
+        <div className="flex min-h-screen flex-col sm:pl-[var(--sidebar-width)] transition-[padding] duration-300 ease-in-out">
+          <header className="sticky top-0 z-30 flex h-14 items-center border-b bg-background/90 px-4 backdrop-blur-md sm:h-16 sm:px-6 shadow-sm select-none">
+            <div className="flex w-full items-center justify-between">
+              {/* Left side: Company / Org name */}
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tenant:</span>
+                <span className="text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg">
+                  {organizationName || "Platform Administration"}
+                </span>
+              </div>
 
-            {/* Right side: Notifications */}
-            <div className="flex items-center gap-4">
-              <NotificationCenter />
+              {/* Right side: Notifications */}
+              <div className="flex items-center gap-4">
+                <NotificationCenter />
+              </div>
             </div>
-          </div>
-        </header>
-        <main className="flex flex-1 flex-col gap-5 p-4 lg:gap-6 lg:p-6">
-          {children}
-        </main>
+          </header>
+          <main className="flex flex-1 flex-col gap-5 p-4 lg:gap-6 lg:p-6">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
-  </ToastProvider>
-</LoadingProvider>
+    </ToastProvider>
   );
 }

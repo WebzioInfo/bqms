@@ -486,7 +486,11 @@ export function ReportForm({ organizationId, initialData, disabled = false }: Pr
                 onClick={handleQuickSubmit}
                 disabled={isSubmittingQuickResult}
               >
-                {isSubmittingQuickResult ? "Submitting..." : "Save Result"}
+                <ButtonLoader
+                  loading={isSubmittingQuickResult}
+                  label="Save Result"
+                  loadingLabel="Saving..."
+                />
               </Button>
             </div>
           </div>

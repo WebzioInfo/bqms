@@ -212,14 +212,14 @@ export async function deleteTestReport(id: string) {
 
 const PARAMS_TO_SEED = [
   // Physical & Chemical
-  { name: "pH", category: "PHYSICAL", unit: "—", minAcceptable: 6.5, maxAcceptable: 8.5 },
+  { name: "pH", category: "PHYSICAL", unit: "—", minAcceptable: 6.0, maxAcceptable: 8.5 },
   { name: "TDS", category: "PHYSICAL", unit: "mg/L", minAcceptable: 0, maxAcceptable: 500 },
   { name: "Turbidity", category: "PHYSICAL", unit: "NTU", minAcceptable: 0, maxAcceptable: 1 },
   { name: "Sulphate", category: "CHEMICAL", unit: "mg/L", minAcceptable: 0, maxAcceptable: 200 },
   { name: "Colour", category: "PHYSICAL", unit: "Descriptor", minAcceptable: 0, maxAcceptable: 0 },
   { name: "Odour", category: "PHYSICAL", unit: "Descriptor", minAcceptable: 0, maxAcceptable: 0 },
   { name: "Taste", category: "PHYSICAL", unit: "Descriptor", minAcceptable: 0, maxAcceptable: 0 },
-  { name: "Residual Free Chlorine", category: "CHEMICAL", unit: "mg/L", minAcceptable: 0.2, maxAcceptable: 1.0 },
+  { name: "Residual Free Chlorine", category: "CHEMICAL", unit: "mg/L", minAcceptable: 0.2, maxAcceptable: null },
   { name: "Alkalinity", category: "CHEMICAL", unit: "mg/L", minAcceptable: 0, maxAcceptable: 200 },
   { name: "Chloride", category: "CHEMICAL", unit: "mg/L", minAcceptable: 0, maxAcceptable: 250 },
 
@@ -237,9 +237,9 @@ export async function getWaterTestParameters() {
   try {
     const user = await requireAnyRole([Role.PLATFORM_ADMIN, Role.COMPANY_ADMIN, Role.QC]);
     
-    // Self-healing database seed for missing parameters
+    // Self-healing database seed/sync for parameters
     const existingParams = await prisma.waterTestParameter.findMany({
-      select: { name: true, category: true }
+      select: { id: true, name: true, category: true, minAcceptable: true, maxAcceptable: true }
     });
     
     const missingParams = PARAMS_TO_SEED.filter(
@@ -257,6 +257,22 @@ export async function getWaterTestParameters() {
           isActive: true
         }))
       });
+    }
+
+    // Update existing parameters if their limits differ from the seed
+    for (const seed of PARAMS_TO_SEED) {
+      const match = existingParams.find(e => e.name === seed.name && e.category === seed.category);
+      if (match) {
+        if (match.minAcceptable !== seed.minAcceptable || match.maxAcceptable !== seed.maxAcceptable) {
+          await prisma.waterTestParameter.update({
+            where: { id: match.id },
+            data: {
+              minAcceptable: seed.minAcceptable,
+              maxAcceptable: seed.maxAcceptable
+            }
+          });
+        }
+      }
     }
 
     const list = await prisma.waterTestParameter.findMany({

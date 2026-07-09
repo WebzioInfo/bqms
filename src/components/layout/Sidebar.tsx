@@ -8,9 +8,11 @@ import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { ROLE_NAVIGATION } from "./navigation";
 import { Tooltip } from "@base-ui/react/tooltip";
+import { useLoading } from "@/components/ui/loading-context";
 
 export function Sidebar({ user, roleLabel, role }: { user: any; roleLabel: string; role: string }) {
   const pathname = usePathname();
+  const { showOverlay } = useLoading();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -124,7 +126,10 @@ export function Sidebar({ user, roleLabel, role }: { user: any; roleLabel: strin
         </div>
         
         <button 
-          onClick={() => signOut({ callbackUrl: '/login' })}
+          onClick={() => {
+            showOverlay("Logging out...");
+            signOut({ callbackUrl: '/login' });
+          }}
           className={cn(
             "flex items-center gap-3 rounded-lg py-2 text-muted-foreground transition-all hover:text-destructive whitespace-nowrap",
             isCollapsed ? "justify-center w-full px-0" : "px-3 w-full"

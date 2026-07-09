@@ -23,6 +23,8 @@ export const viewport: Viewport = {
   themeColor: "#0f172a",
 };
 
+import { LoadingProvider } from "@/components/ui/loading-context";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -56,7 +58,9 @@ export default function RootLayout({
             }
           `}
         </Script>
-        {children}
+        <LoadingProvider>
+          {children}
+        </LoadingProvider>
       </body>
     </html>
   );

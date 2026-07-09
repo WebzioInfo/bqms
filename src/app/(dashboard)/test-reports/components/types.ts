@@ -29,14 +29,14 @@ export interface ParameterDef {
 
 export const STATIC_PARAMETERS: ParameterDef[] = [
   // Physical & Chemical
-  { id: "pH", name: "pH", category: "PHYSICAL", unit: "—", minAcceptable: 6.5, maxAcceptable: 8.5 },
+  { id: "pH", name: "pH", category: "PHYSICAL", unit: "—", minAcceptable: 6.0, maxAcceptable: 8.5 },
   { id: "TDS", name: "TDS", category: "PHYSICAL", unit: "mg/L", minAcceptable: 0, maxAcceptable: 500 },
   { id: "Turbidity", name: "Turbidity", category: "PHYSICAL", unit: "NTU", minAcceptable: 0, maxAcceptable: 1 },
   { id: "Sulphate", name: "Sulphate", category: "CHEMICAL", unit: "mg/L", minAcceptable: 0, maxAcceptable: 200 },
   { id: "Colour", name: "Colour", category: "PHYSICAL", unit: "Descriptor", minAcceptable: 0, maxAcceptable: 0 },
   { id: "Odour", name: "Odour", category: "PHYSICAL", unit: "Descriptor", minAcceptable: 0, maxAcceptable: 0 },
   { id: "Taste", name: "Taste", category: "PHYSICAL", unit: "Descriptor", minAcceptable: 0, maxAcceptable: 0 },
-  { id: "Residual Free Chlorine", name: "Residual Free Chlorine", category: "CHEMICAL", unit: "mg/L", minAcceptable: 0.2, maxAcceptable: 1.0 },
+  { id: "Residual Free Chlorine", name: "Residual Free Chlorine", category: "CHEMICAL", unit: "mg/L", minAcceptable: 0.2, maxAcceptable: null },
   { id: "Alkalinity", name: "Alkalinity", category: "CHEMICAL", unit: "mg/L", minAcceptable: 0, maxAcceptable: 200 },
   { id: "Chloride", name: "Chloride", category: "CHEMICAL", unit: "mg/L", minAcceptable: 0, maxAcceptable: 250 },
 

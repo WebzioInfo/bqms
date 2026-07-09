@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -8,13 +8,17 @@ import { ArrowLeft, Edit, Printer } from "lucide-react";
 import { ReportForm } from "../components/report-form";
 import { STATIC_PARAMETERS } from "../components/types";
 import { generateReportDefinition } from "@/lib/pdf";
+import { ButtonLoader } from "@/components/ui/button-loader";
 
 interface ReportDetailClientProps {
   report: any;
 }
 
 export function ReportDetailClient({ report }: ReportDetailClientProps) {
+  const [isGenerating, setIsGenerating] = useState(false);
+
   const handleDownloadPDF = async () => {
+    setIsGenerating(true);
     try {
       // Dynamically import pdfmake to avoid bloating the client bundle and fix Node.js issues
       const pdfMakeModule = await import("pdfmake/build/pdfmake");
@@ -95,6 +99,8 @@ export function ReportDetailClient({ report }: ReportDetailClientProps) {
     } catch (err) {
       console.error("Failed to generate PDF:", err);
       alert("Failed to generate PDF. Please try again.");
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -122,10 +128,15 @@ export function ReportDetailClient({ report }: ReportDetailClientProps) {
             variant="outline" 
             size="sm" 
             onClick={handleDownloadPDF} 
+            disabled={isGenerating}
             className="h-8 border-slate-250 text-xs font-bold rounded-lg px-4 hover:bg-slate-50 flex items-center gap-1.5"
           >
-            <Printer className="h-3.5 w-3.5 text-slate-500" />
-            <span>Download PDF</span>
+            <ButtonLoader
+              loading={isGenerating}
+              label="Download PDF"
+              loadingLabel="Generating PDF..."
+              icon={<Printer className="h-3.5 w-3.5 text-slate-500" />}
+            />
           </Button>
           {report.status === "DRAFT" && (
             <Link href={`/test-reports/${report.id}/edit`}>
