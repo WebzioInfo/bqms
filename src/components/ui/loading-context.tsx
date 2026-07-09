@@ -1,16 +1,16 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useEffect, useTransition } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { LoadingOverlay } from "./LoadingOverlay";
 
 interface LoadingContextType {
-  startLoading: (key: string, message?: string) => void;
+  startLoading: (key: string) => void;
   stopLoading: (key: string) => void;
   isLoading: (key?: string) => boolean;
   showOverlay: (message?: string) => void;
   hideOverlay: () => void;
-  wrapPromise: <T>(promise: Promise<T>, message?: string) => Promise<T>;
+  wrapPromise: <T>(promise: Promise<T>) => Promise<T>;
 }
 
 const LoadingContext = createContext<LoadingContextType | undefined>(undefined);
@@ -23,69 +23,44 @@ export function useLoading() {
   return context;
 }
 
-function getMutationMessage(url: string, method: string): string {
-  const cleanUrl = url.split("?")[0];
-  if (cleanUrl.includes("/export")) {
-    return "Generating PDF report...";
-  }
-  if (cleanUrl.includes("/download")) {
-    return "Downloading document...";
-  }
-  if (cleanUrl.includes("/test-reports")) {
-    if (method === "DELETE") return "Deleting test report...";
-    if (method === "POST") return "Saving Water Test...";
-    return "Updating Water Test...";
-  }
-  if (cleanUrl.includes("/compliance")) {
-    if (method === "DELETE") return "Deleting compliance requirement...";
-    return "Saving compliance data...";
-  }
-  if (cleanUrl.includes("/auth")) {
-    if (cleanUrl.includes("/signout") || cleanUrl.includes("/clear")) return "Logging out...";
-    return "Authenticating...";
-  }
-  if (method === "POST" || method === "PUT" || method === "PATCH") {
-    return "Saving changes...";
-  }
-  if (method === "DELETE") {
-    return "Deleting record...";
-  }
-  return "Please wait...";
-}
-
-function getNavigationMessage(path: string): string {
-  const cleanPath = path.split("?")[0];
-  if (cleanPath === "/" || cleanPath === "/overview") return "Loading Dashboard...";
-  if (cleanPath.startsWith("/test-reports")) {
-    if (cleanPath.includes("/new")) return "Preparing Water Test Form...";
-    if (cleanPath.includes("/edit")) return "Preparing Edit Form...";
-    return "Fetching Laboratory Data...";
-  }
-  if (cleanPath.startsWith("/compliance")) return "Loading Compliance Requirements...";
-  if (cleanPath.startsWith("/certificates")) return "Loading Certificates...";
-  if (cleanPath.startsWith("/users")) return "Loading User Management...";
-  if (cleanPath.startsWith("/settings")) return "Loading Settings...";
-  if (cleanPath.startsWith("/login")) return "Loading Login Screen...";
-  return "Loading Page...";
-}
-
 export function LoadingProvider({ children }: { children: React.ReactNode }) {
-  const [loadingTasks, setLoadingTasks] = useState<Map<string, string>>(new Map());
-  const [overlayMessage, setOverlayMessage] = useState<string | null>(null);
+  const [loadingKeys, setLoadingKeys] = useState<Set<string>>(new Set());
+  const [showOverlayVisible, setShowOverlayVisible] = useState(false);
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [isPending, startTransition] = useTransition();
-
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  const clearOverlayTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    setShowOverlayVisible(false);
+  }, []);
+
+  const triggerOverlayWithDelay = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      setShowOverlayVisible(true);
+    }, 250); // Only show overlay if navigation takes longer than 250ms
+  }, []);
+
   // Hide the loading overlay when route navigation is fully complete
   useEffect(() => {
-    setOverlayMessage(null);
-  }, [pathname, searchParams]);
+    clearOverlayTimer();
+  }, [pathname, searchParams, clearOverlayTimer]);
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   // Intercept all internal anchor clicks
   useEffect(() => {
@@ -111,7 +86,7 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
           const isHashChange = url.pathname === window.location.pathname && url.hash !== window.location.hash;
           
           if (isSameOrigin && isDifferentPath && !isHashChange) {
-            setOverlayMessage(getNavigationMessage(url.pathname));
+            triggerOverlayWithDelay();
           }
         } catch (err) {
           // Ignore invalid URL parsing
@@ -123,24 +98,24 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
     return () => {
       document.removeEventListener("click", handleLinkClick);
     };
-  }, []);
+  }, [triggerOverlayWithDelay]);
 
   // Intercept browser back/forward and pushState/replaceState
   useEffect(() => {
     // 1. Listen for browser Back/Forward (popstate)
     const handlePopState = () => {
-      setOverlayMessage(getNavigationMessage(window.location.pathname));
+      triggerOverlayWithDelay();
     };
     window.addEventListener("popstate", handlePopState);
 
-    // 2. Monkeypatch pushState and replaceState to show loading during programatic router calls
+    // 2. Monkeypatch pushState and replaceState to show loading during programmatic router redirects
     const originalPush = window.history.pushState;
     const originalReplace = window.history.replaceState;
 
     window.history.pushState = function (...args) {
       const url = args[2]?.toString() || "";
       if (url.startsWith("/") && !url.includes("/_next/")) {
-        setOverlayMessage(getNavigationMessage(url));
+        triggerOverlayWithDelay();
       }
       return originalPush.apply(this, args);
     };
@@ -148,7 +123,7 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
     window.history.replaceState = function (...args) {
       const url = args[2]?.toString() || "";
       if (url.startsWith("/") && !url.includes("/_next/")) {
-        setOverlayMessage(getNavigationMessage(url));
+        triggerOverlayWithDelay();
       }
       return originalReplace.apply(this, args);
     };
@@ -158,70 +133,19 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
       window.history.pushState = originalPush;
       window.history.replaceState = originalReplace;
     };
-  }, []);
+  }, [triggerOverlayWithDelay]);
 
-  // Intercept all fetch requests globally (Route Handlers, Server Actions, exports, etc.)
-  useEffect(() => {
-    const originalFetch = window.fetch;
-
-    window.fetch = async function (...args) {
-      const url = args[0]?.toString() || "";
-      const isInternal = url.includes("/_next/") || url.includes("webpack");
-      const options = args[1];
-      const method = options?.method?.toUpperCase() || "GET";
-
-      let taskMessage = "Loading...";
-      let isMutation = false;
-
-      if (!isInternal) {
-        if (method !== "GET") {
-          isMutation = true;
-          taskMessage = getMutationMessage(url, method);
-          setOverlayMessage(taskMessage);
-        } else {
-          taskMessage = "Fetching data...";
-        }
-
-        setLoadingTasks((prev) => {
-          const next = new Map(prev);
-          next.set(url, taskMessage);
-          return next;
-        });
-      }
-
-      try {
-        const response = await originalFetch.apply(this, args);
-        return response;
-      } finally {
-        if (!isInternal) {
-          setLoadingTasks((prev) => {
-            const next = new Map(prev);
-            next.delete(url);
-            return next;
-          });
-          if (isMutation) {
-            setOverlayMessage(null);
-          }
-        }
-      }
-    };
-
-    return () => {
-      window.fetch = originalFetch;
-    };
-  }, []);
-
-  const startLoading = useCallback((key: string, message = "Loading...") => {
-    setLoadingTasks((prev) => {
-      const next = new Map(prev);
-      next.set(key, message);
+  const startLoading = useCallback((key: string) => {
+    setLoadingKeys((prev) => {
+      const next = new Set(prev);
+      next.add(key);
       return next;
     });
   }, []);
 
   const stopLoading = useCallback((key: string) => {
-    setLoadingTasks((prev) => {
-      const next = new Map(prev);
+    setLoadingKeys((prev) => {
+      const next = new Set(prev);
       next.delete(key);
       return next;
     });
@@ -229,34 +153,30 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
 
   const isLoading = useCallback((key?: string) => {
     if (key) {
-      return loadingTasks.has(key);
+      return loadingKeys.has(key);
     }
-    return loadingTasks.size > 0;
-  }, [loadingTasks]);
+    return loadingKeys.size > 0;
+  }, [loadingKeys]);
 
-  const showOverlay = useCallback((message = "Loading...") => {
-    setOverlayMessage(message);
-  }, []);
+  const showOverlay = useCallback(() => {
+    triggerOverlayWithDelay();
+  }, [triggerOverlayWithDelay]);
 
   const hideOverlay = useCallback(() => {
-    setOverlayMessage(null);
-  }, []);
+    clearOverlayTimer();
+  }, [clearOverlayTimer]);
 
-  const wrapPromise = useCallback(async <T,>(promise: Promise<T>, message = "Loading..."): Promise<T> => {
+  const wrapPromise = useCallback(async <T,>(promise: Promise<T>): Promise<T> => {
     const key = Math.random().toString(36).substring(7);
-    showOverlay(message);
-    startLoading(key, message);
+    triggerOverlayWithDelay();
+    startLoading(key);
     try {
       return await promise;
     } finally {
       stopLoading(key);
-      hideOverlay();
+      clearOverlayTimer();
     }
-  }, [showOverlay, hideOverlay, startLoading, stopLoading]);
-
-  // Check if we should render overlay
-  const showLoader = overlayMessage !== null || isPending;
-  const currentMessage = overlayMessage || "Please wait...";
+  }, [triggerOverlayWithDelay, startLoading, stopLoading, clearOverlayTimer]);
 
   return (
     <LoadingContext.Provider value={{ startLoading, stopLoading, isLoading, showOverlay, hideOverlay, wrapPromise }}>
@@ -278,7 +198,7 @@ export function LoadingProvider({ children }: { children: React.ReactNode }) {
       ) : (
         <>
           {children}
-          {showLoader && <LoadingOverlay message={currentMessage} />}
+          {showOverlayVisible && <LoadingOverlay message="Loading..." />}
         </>
       )}
     </LoadingContext.Provider>

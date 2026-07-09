@@ -23,12 +23,8 @@ export function NotificationCenter() {
   };
 
   useEffect(() => {
-    // Initial fetch
+    // Initial fetch only
     fetchNotifications();
-
-    // Poll every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {

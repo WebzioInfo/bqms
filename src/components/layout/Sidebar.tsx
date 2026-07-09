@@ -127,7 +127,7 @@ export function Sidebar({ user, roleLabel, role }: { user: any; roleLabel: strin
         
         <button 
           onClick={() => {
-            showOverlay("Logging out...");
+            showOverlay();
             signOut({ callbackUrl: '/login' });
           }}
           className={cn(

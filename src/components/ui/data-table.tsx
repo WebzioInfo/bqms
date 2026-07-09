@@ -29,15 +29,6 @@ export function DataTable<T>({
   emptyMessage = "No results found."
 }: DataTableProps<T>) {
   const [search, setSearch] = useState("");
-  const [isFiltering, setIsFiltering] = useState(false);
-
-  useEffect(() => {
-    setIsFiltering(true);
-    const timer = setTimeout(() => {
-      setIsFiltering(false);
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [search]);
 
   const filteredData = React.useMemo(() => {
     if (!searchKey || !search) return data;
@@ -77,15 +68,7 @@ export function DataTable<T>({
           {filteredData.length} records
         </div>
       </div>
-      <div className="overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm relative">
-        {isFiltering && (
-          <div className="absolute inset-0 bg-white/60 dark:bg-slate-950/60 backdrop-blur-[1px] z-10 flex items-center justify-center animate-in fade-in duration-150 select-none">
-            <div className="flex items-center gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-4 py-2.5 rounded-xl shadow-lg animate-in zoom-in-95 duration-150">
-              <PremiumSpinner size="h-5 w-5" />
-              <span className="text-xs font-bold text-slate-750 dark:text-slate-355 tracking-tight">Updating...</span>
-            </div>
-          </div>
-        )}
+      <div className="overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm">
         <Table>
           <TableHeader className="bg-muted/40">
             <TableRow>

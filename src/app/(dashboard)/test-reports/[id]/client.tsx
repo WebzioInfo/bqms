@@ -103,7 +103,7 @@ export function ReportDetailClient({ report }: ReportDetailClientProps) {
       console.error("Failed to generate PDF:", err);
       alert("Failed to generate PDF. Please try again.");
     }
-    })(), "Generating PDF...");
+    })());
     setIsGenerating(false);
   };
 
