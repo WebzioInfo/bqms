@@ -17,7 +17,7 @@ export const options = {
   },
 };
 
-const BASE_URL = __ENV.BASE_URL || 'http://localhost:3000';
+const BASE_URL = __ENV.BASE_URL || 'https://biodrops.biofixtechnology.com' || "https://www.biodrops.india.com";
 
 export default function () {
   // Simulate heavy public QR scanning traffic on verification endpoints
@@ -26,7 +26,7 @@ export default function () {
 
   // Request 1: Public Verification Page (Tests Next.js SSR + Prisma Queries)
   const res1 = http.get(`${BASE_URL}/verify/restaurant/${randomSlug}`);
-  
+
   check(res1, {
     'Verification page status is 200': (r) => r.status === 200,
     'Verification page loaded fast': (r) => r.timings.duration < 500,
