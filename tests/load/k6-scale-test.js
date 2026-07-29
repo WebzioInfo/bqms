@@ -17,7 +17,7 @@ export const options = {
   },
 };
 
-const BASE_URL = __ENV.BASE_URL || 'https://biodrops.biofixtechnology.com' || "https://www.biodrops.india.com";
+const BASE_URL = __ENV.BASE_URL || 'http://localhost:3000' || "https://biodrops.biofixtechnology.com" || "https://www.biodrops.india.com";
 
 export default function () {
   // Simulate heavy public QR scanning traffic on verification endpoints
