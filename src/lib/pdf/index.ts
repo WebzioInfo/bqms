@@ -26,9 +26,10 @@ export function generateReportDefinition(data: ReportData): any {
 
   const content: any[] = [];
 
-  // Y-position height tracker (A4 height 842 - margins [128 top, 60 bottom] = 654 printable height)
-  const PRINTABLE_HEIGHT = 654;
-  let currentY = 180; // Est. height of Report Info block (~180pt including padding/margins)
+  // Top margin is set to 170pt to clear the ~156pt header image with 14pt breathing room.
+  // Printable height = A4 height (841.89) - top margin (170) - bottom margin (60) = 611.89pt (~612pt).
+  const PRINTABLE_HEIGHT = 612;
+  let currentY = 160; // Est. height of Report Info block (~160pt including padding/margins)
 
   // 2. Report Information Block (placed at the top of the content stream, page 1)
   content.push(getReportInfo(metadata));
@@ -46,14 +47,12 @@ export function generateReportDefinition(data: ReportData): any {
     const avgRowHeight = 24;
     const spacingHeight = 20;
 
-    // Minimum height required to prevent orphan (header + table header + 2 rows)
-    const minHeightRequired = sectionHeaderHeight + tableHeaderHeight + (2 * avgRowHeight);
     const totalSectionHeight = sectionHeaderHeight + tableHeaderHeight + (rowsCount * avgRowHeight) + spacingHeight;
 
     let pageBreak: 'before' | undefined = undefined;
 
-    // If remaining space on the page is less than the minimum height, push to new page
-    if (currentY + minHeightRequired > PRINTABLE_HEIGHT) {
+    // If remaining space on the current page is less than total section height, push section to top of next page
+    if (currentY + totalSectionHeight > PRINTABLE_HEIGHT) {
       pageBreak = 'before';
       currentY = 0;
     }
@@ -66,18 +65,8 @@ export function generateReportDefinition(data: ReportData): any {
     content.push(tableComponent);
 
     // Track Y-position after rendering the section
-    if (currentY + totalSectionHeight > PRINTABLE_HEIGHT) {
-      // Handles multi-page table splits: calculate rows on the overflow page
-      const remainingSpace = PRINTABLE_HEIGHT - currentY;
-      const spaceForRows = remainingSpace - sectionHeaderHeight - tableHeaderHeight;
-      const fitRows = Math.floor(spaceForRows / avgRowHeight);
-      
-      if (fitRows > 0) {
-        const spillRows = rowsCount - fitRows;
-        currentY = (spillRows * avgRowHeight) + spacingHeight;
-      } else {
-        currentY = totalSectionHeight;
-      }
+    if (pageBreak) {
+      currentY = totalSectionHeight;
     } else {
       currentY += totalSectionHeight;
     }
@@ -110,13 +99,13 @@ export function generateReportDefinition(data: ReportData): any {
   return {
     pageType: 'A4',
     pageOrientation: 'portrait',
-    pageMargins: [36, 128, 36, 60], // Left, Top, Right, Bottom
+    pageMargins: [36, 170, 36, 60], // Left, Top (170pt clears 156pt header), Right, Bottom
     header: function(currentPage: number) {
       return {
         stack: [
           getReportHeader(metadata)
         ],
-        margin: [36, 12, 36, 0]
+        margin: [0, 0, 0, 0]
       };
     },
     background: getWatermark(),

@@ -5,51 +5,48 @@ export function getReportFooter(batchNumber: string = '—') {
   return function(currentPage: number, pageCount: number) {
     return {
       stack: [
-        // Thin separator line above footer
+        // Clean, subtle divider line spanning printable width (523.28pt)
         {
           canvas: [
-            { type: 'line', x1: 36, y1: 0, x2: 559, y2: 0, lineWidth: 0.5, color: PDF_COLORS.border }
+            { type: 'line', x1: 0, y1: 0, x2: 523.28, y2: 0, lineWidth: 0.5, color: PDF_COLORS.border }
           ],
-          margin: [0, 0, 0, 5]
+          margin: [0, 0, 0, 6]
         },
-        // Footer Content Columns
+        // Footer Content Columns with symmetrical margins and aligned baselines
         {
           columns: [
-            // Left: Certification Badges
+            // Left: Aligned Certification Badges
             {
               width: '*',
               columns: [
-                { image: PDF_IMAGES.stateEmblem, fit: [15, 15], width: 15 },
-                { image: PDF_IMAGES.isoLogo, fit: [15, 15], width: 15, margin: [4, 0, 0, 0] },
-                { image: PDF_IMAGES.msmeLogo, fit: [25, 15], width: 25, margin: [4, 0, 0, 0] },
-                { image: PDF_IMAGES.keralaPcb, fit: [15, 15], width: 15, margin: [4, 0, 0, 0] },
-                { image: PDF_IMAGES.lifeLogo, fit: [22, 15], width: 22, margin: [4, 0, 0, 0] }
+                { image: PDF_IMAGES.stateEmblem, fit: [14, 14], width: 14 },
+                { image: PDF_IMAGES.isoLogo, fit: [14, 14], width: 14, margin: [3, 0, 0, 0] },
+                { image: PDF_IMAGES.msmeLogo, fit: [22, 14], width: 22, margin: [3, 0, 0, 0] },
+                { image: PDF_IMAGES.keralaPcb, fit: [14, 14], width: 14, margin: [3, 0, 0, 0] },
+                { image: PDF_IMAGES.lifeLogo, fit: [20, 14], width: 20, margin: [3, 0, 0, 0] }
               ],
-              margin: [36, 0, 0, 0]
+              margin: [0, 1, 0, 0]
             },
-            // Center: Page X of Y & Report ID
+            // Center: Single-Line Page Number & Report ID
             {
               width: 'auto',
               stack: [
                 {
-                  text: `Page ${currentPage} of ${pageCount}`,
-                  fontSize: 7,
-                  color: PDF_COLORS.textMuted,
+                  text: [
+                    { text: `Page ${currentPage} of ${pageCount}`, bold: true, color: PDF_COLORS.secondary },
+                    { text: '  •  ', color: PDF_COLORS.primary, bold: true },
+                    { text: `Report ID: ${batchNumber}`, color: PDF_COLORS.textMuted }
+                  ],
+                  fontSize: 6.5,
                   alignment: 'center'
-                },
-                {
-                  text: `Report ID: ${batchNumber}`,
-                  fontSize: 6,
-                  color: PDF_COLORS.textMuted,
-                  alignment: 'center',
-                  margin: [0, 1, 0, 0]
                 }
               ],
-              alignment: 'center'
+              alignment: 'center',
+              margin: [0, 2, 0, 0]
             },
-            // Right: Company Details
+            // Right: Aligned Enterprise Company Block
             {
-              width: 220,
+              width: 215,
               stack: [
                 {
                   text: 'Biofix Technology L.L.P.',
@@ -73,12 +70,12 @@ export function getReportFooter(batchNumber: string = '—') {
                   margin: [0, 1, 0, 0]
                 }
               ],
-              margin: [0, 0, 36, 0]
+              margin: [0, 0, 0, 0]
             }
           ]
         }
       ],
-      margin: [0, 0, 0, 20]
+      margin: [36, 0, 36, 18] // Symmetrical 36pt left/right page margin
     };
   };
 }

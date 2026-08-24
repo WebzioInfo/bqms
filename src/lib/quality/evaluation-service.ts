@@ -199,10 +199,10 @@ export function evaluate(
       status = "PASS";
     } else {
       const lowerVal = valStr.toLowerCase();
-      const isPass = config.passText?.some(t => t.toLowerCase() === lowerVal) || 
-                      ["agreeable", "unobjectionable"].includes(lowerVal);
+      const isPass = config.passText?.some(t => t.toLowerCase() === lowerVal) ||
+        ["agreeable", "unobjectionable"].includes(lowerVal);
       const isWarning = config.warningText?.some(t => t.toLowerCase() === lowerVal) ||
-                         ["mild", "slight"].includes(lowerVal);
+        ["mild", "slight"].includes(lowerVal);
       if (isPass) {
         status = "PASS";
       } else if (isWarning) {

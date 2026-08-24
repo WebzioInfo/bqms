@@ -1,93 +1,104 @@
 import { PDF_COLORS } from './PDFTheme';
 
 export function getReportInfo(metadata: Record<string, string> = {}) {
-  // Extract and compute fields dynamically
+  // Extract fields
   const reportNo = metadata['Report Number'] || '—';
   const batchNo = metadata['Batch Number'] || '—';
   const sampleCode = metadata['Sample Code'] || batchNo;
-  const company = metadata['Company'] || 'N/A';
+  const company = metadata['Customer / Client'] || metadata['Company'] || 'N/A';
   const mfgDate = metadata['Production Date'] || '—';
-  const sampleTime = metadata['Sample Time'] || '—';
+  const sampleTime = metadata['Sample Time'] || metadata['Collected On'] || '—';
   const reportType = metadata['Report Type'] || '—';
-  const status = metadata['Overall Status'] || 'APPROVED';
+  const status = metadata['Overall Status'] || metadata['Report Status'] || 'APPROVED';
   
-  // Signatories/people involved
   const collectedBy = metadata['Collected By'] || 'QC Team';
   const testedBy = metadata['Tested By'] || 'QC Specialist';
   const verifiedBy = metadata['Verified By'] || 'Lab In-Charge';
   
-  // Format current date for report generated
   const generatedDate = metadata['Report Generated'] || new Date().toLocaleDateString('en-GB', {
     day: '2-digit',
     month: 'short',
     year: 'numeric'
   });
 
-  const shelfLife = metadata['Shelf Life'] || '30 Days';
   const bestBefore = metadata['Best Before'] || (mfgDate !== '—' ? `${mfgDate} (30 Days)` : '—');
   const sampleSource = metadata['Sample Source'] || 'Production Line';
   const location = metadata['Location'] || 'Plant Facility';
+  const customerAddress = metadata['Customer Address'] || metadata['Address'] || '';
 
-  // Construct the public verification URL
   const verifyUrl = `https://bqms.vercel.app/KNOWYOURWATER?batch=${encodeURIComponent(batchNo)}`;
 
-  const tableBody = [
+  const labelStyle = { fontSize: 7.5, bold: true, color: '#475569' };
+  const valueStyle = { fontSize: 7.5, color: '#0F172A' };
+
+  const tableBody: any[][] = [
     // Row 1
     [
-      { text: 'Sample Code', style: 'metaLabel' },
-      { text: sampleCode, style: 'metaValue' },
-      { text: 'Report Number', style: 'metaLabel' },
-      { text: reportNo, style: 'metaValue' }
+      { text: 'Sample Code', ...labelStyle, fillColor: PDF_COLORS.bgCard },
+      { text: sampleCode, ...valueStyle, bold: true, fillColor: PDF_COLORS.bgCard },
+      { text: 'Report Number', ...labelStyle, fillColor: PDF_COLORS.bgCard },
+      { text: reportNo, ...valueStyle, bold: true, fillColor: PDF_COLORS.bgCard }
     ],
     // Row 2
     [
-      { text: 'Customer / Client', style: 'metaLabel' },
-      { text: company, style: 'metaValue' },
-      { text: 'Collected On', style: 'metaLabel' },
-      { text: sampleTime, style: 'metaValue' }
+      { text: 'Customer / Client', ...labelStyle, fillColor: PDF_COLORS.bgCard },
+      { text: company, ...valueStyle, fillColor: PDF_COLORS.bgCard },
+      { text: 'Collected On', ...labelStyle, fillColor: PDF_COLORS.bgCard },
+      { text: sampleTime, ...valueStyle, fillColor: PDF_COLORS.bgCard }
     ],
     // Row 3
     [
-      { text: 'Sample Source', style: 'metaLabel' },
-      { text: sampleSource, style: 'metaValue' },
-      { text: 'Location / Address', style: 'metaLabel' },
-      { text: location, style: 'metaValue' }
+      { text: 'Sample Source', ...labelStyle, fillColor: PDF_COLORS.bgCard },
+      { text: sampleSource, ...valueStyle, fillColor: PDF_COLORS.bgCard },
+      { text: 'Location', ...labelStyle, fillColor: PDF_COLORS.bgCard },
+      { text: location, ...valueStyle, fillColor: PDF_COLORS.bgCard }
     ],
     // Row 4
     [
-      { text: 'Manufacturing Date', style: 'metaLabel' },
-      { text: mfgDate, style: 'metaValue' },
-      { text: 'Best Before / Expiry', style: 'metaLabel' },
-      { text: bestBefore, style: 'metaValue' }
+      { text: 'Manufacturing Date', ...labelStyle, fillColor: PDF_COLORS.bgCard },
+      { text: mfgDate, ...valueStyle, fillColor: PDF_COLORS.bgCard },
+      { text: 'Best Before', ...labelStyle, fillColor: PDF_COLORS.bgCard },
+      { text: bestBefore, ...valueStyle, fillColor: PDF_COLORS.bgCard }
     ],
     // Row 5
     [
-      { text: 'Collected By', style: 'metaLabel' },
-      { text: collectedBy, style: 'metaValue' },
-      { text: 'Report Generated', style: 'metaLabel' },
-      { text: generatedDate, style: 'metaValue' }
+      { text: 'Collected By', ...labelStyle, fillColor: PDF_COLORS.bgCard },
+      { text: collectedBy, ...valueStyle, fillColor: PDF_COLORS.bgCard },
+      { text: 'Report Generated', ...labelStyle, fillColor: PDF_COLORS.bgCard },
+      { text: generatedDate, ...valueStyle, fillColor: PDF_COLORS.bgCard }
     ],
     // Row 6
     [
-      { text: 'Report Type', style: 'metaLabel' },
-      { text: reportType, style: 'metaValue' },
-      { text: 'Report Status', style: 'metaLabel' },
+      { text: 'Report Type', ...labelStyle, fillColor: PDF_COLORS.bgCard },
+      { text: reportType, ...valueStyle, fillColor: PDF_COLORS.bgCard },
+      { text: 'Report Status', ...labelStyle, fillColor: PDF_COLORS.bgCard },
       { 
         text: status, 
-        style: 'metaValue', 
+        fontSize: 7.5,
         bold: true,
-        color: status === 'APPROVED' || status === 'PUBLISHED' || status === 'PASS' ? PDF_COLORS.pass : PDF_COLORS.fail 
+        color: (status === 'APPROVED' || status === 'PUBLISHED' || status === 'PASS') ? PDF_COLORS.pass : PDF_COLORS.fail,
+        fillColor: PDF_COLORS.bgCard
       }
     ]
   ];
 
+  // Integrate Customer Address if present
+  if (customerAddress) {
+    tableBody.push([
+      { text: 'Customer Address', ...labelStyle, fillColor: PDF_COLORS.bgCard },
+      { text: customerAddress, ...valueStyle, colSpan: 3, fillColor: PDF_COLORS.bgCard },
+      {},
+      {}
+    ]);
+  }
+
   return {
     columns: [
-      // Left: Metadata Grid
+      // Left: Integrated Enterprise Metadata Grid Card
       {
         width: '*',
         table: {
-          widths: ['23%', '27%', '23%', '27%'],
+          widths: ['22%', '28%', '22%', '28%'],
           body: tableBody
         },
         layout: {
@@ -95,40 +106,58 @@ export function getReportInfo(metadata: Record<string, string> = {}) {
           vLineWidth: () => 0.5,
           hLineColor: () => PDF_COLORS.border,
           vLineColor: () => PDF_COLORS.border,
-          paddingLeft: () => 8,
-          paddingRight: () => 8,
-          paddingTop: () => 5,
-          paddingBottom: () => 5
+          paddingLeft: () => 7,
+          paddingRight: () => 7,
+          paddingTop: () => 4,
+          paddingBottom: () => 4
         }
       },
-      // Right: Certificate QR Code Block
+      // Right: Enterprise QR Code Card
       {
-        width: 72,
-        stack: [
-          {
-            qr: verifyUrl,
-            fit: 60,
-            alignment: 'center'
-          },
-          {
-            text: 'SCAN TO VERIFY',
-            fontSize: 5.5,
-            bold: true,
-            color: PDF_COLORS.secondary,
-            alignment: 'center',
-            margin: [0, 4, 0, 0]
-          },
-          {
-            text: 'OFFICIAL REPORT',
-            fontSize: 4.5,
-            color: PDF_COLORS.textMuted,
-            alignment: 'center',
-            margin: [0, 1, 0, 0]
-          }
-        ],
-        margin: [12, 4, 0, 0]
+        width: 76,
+        table: {
+          widths: ['*'],
+          body: [
+            [
+              {
+                stack: [
+                  {
+                    qr: verifyUrl,
+                    fit: 56,
+                    alignment: 'center',
+                    margin: [0, 2, 0, 4]
+                  },
+                  {
+                    text: 'SCAN TO VERIFY',
+                    fontSize: 5.5,
+                    bold: true,
+                    color: PDF_COLORS.secondary,
+                    alignment: 'center',
+                    characterSpacing: 0.5
+                  },
+                  {
+                    text: 'OFFICIAL REPORT',
+                    fontSize: 4.5,
+                    color: PDF_COLORS.textMuted,
+                    alignment: 'center',
+                    margin: [0, 1, 0, 0]
+                  }
+                ],
+                fillColor: PDF_COLORS.bgCard,
+                margin: [4, 4, 4, 4]
+              }
+            ]
+          ]
+        },
+        layout: {
+          hLineWidth: () => 0.5,
+          vLineWidth: () => 0.5,
+          hLineColor: () => PDF_COLORS.border,
+          vLineColor: () => PDF_COLORS.border
+        },
+        margin: [10, 0, 0, 0]
       }
     ],
-    margin: [0, 0, 0, 15]
+    margin: [0, 0, 0, 14]
   };
 }

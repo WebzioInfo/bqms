@@ -10,7 +10,7 @@ export function getStatusBadge(status: string) {
 
   if (cleanStatus === 'PASS' || cleanStatus === 'APPROVED' || cleanStatus === 'WITHIN LIMIT' || cleanStatus === 'WITHIN LIMITS') {
     color = PDF_COLORS.pass;
-    text = cleanStatus === 'PASS' ? '✔ PASS' : status;
+    text = cleanStatus === 'PASS' ? '✔ PASS' : (cleanStatus === 'WITHIN LIMITS' || cleanStatus === 'WITHIN LIMIT' ? '✓ PASS' : status);
   } else if (cleanStatus === 'FAIL' || cleanStatus === 'REJECTED' || cleanStatus === 'ABOVE LIMIT' || cleanStatus === 'ABOVE LIMITS' || cleanStatus === 'ABOVE MAXIMUM') {
     color = PDF_COLORS.fail;
     text = cleanStatus === 'FAIL' ? '✘ FAIL' : status;
@@ -29,7 +29,7 @@ export function getStatusBadge(status: string) {
     color,
     bold: isBold,
     italic: isItalic,
-    fontSize: 7.5,
+    fontSize: 7,
     alignment: 'center'
   };
 }

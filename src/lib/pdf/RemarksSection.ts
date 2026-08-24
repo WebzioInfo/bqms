@@ -28,7 +28,6 @@ export function getRemarksSection(remarksText?: string) {
 
   lines.forEach(line => {
     const trimmedLine = line.trim();
-    // Check if line matches a keyword heading
     const matchingHeading = headingKeywords.find(h => 
       trimmedLine.toUpperCase().startsWith(h.key) || 
       trimmedLine.toUpperCase().replace(':', '').trim() === h.key
@@ -44,7 +43,6 @@ export function getRemarksSection(remarksText?: string) {
       currentSectionTitle = matchingHeading.title;
       currentContentLines = [];
       
-      // If the line contains content after the heading, add it
       const headerPartLength = trimmedLine.split(':')[0].length;
       const contentPart = trimmedLine.substring(headerPartLength + 1).trim();
       if (contentPart) {
@@ -62,7 +60,6 @@ export function getRemarksSection(remarksText?: string) {
     });
   }
 
-  // Fallback: If no sections split, just add the whole text
   if (sections.length === 0) {
     sections.push({
       title: 'Overall Summary & Observations',
@@ -75,9 +72,10 @@ export function getRemarksSection(remarksText?: string) {
       stack: [
         {
           text: sec.title.toUpperCase(),
-          fontSize: 9,
+          fontSize: 8.5,
           bold: true,
           color: PDF_COLORS.secondary,
+          characterSpacing: 0.5,
           margin: [0, 8, 0, 4]
         },
         {
@@ -90,16 +88,16 @@ export function getRemarksSection(remarksText?: string) {
                   fontSize: 8.5,
                   color: PDF_COLORS.textDark,
                   lineHeight: 1.4,
-                  margin: [8, 8, 8, 8]
+                  margin: [10, 8, 10, 8]
                 }
               ]
             ]
           },
           layout: {
             hLineWidth: () => 0.5,
-            vLineWidth: () => 0.5,
+            vLineWidth: (i: number) => (i === 0 ? 3 : 0.5),
             hLineColor: () => PDF_COLORS.border,
-            vLineColor: () => PDF_COLORS.border,
+            vLineColor: (i: number) => (i === 0 ? PDF_COLORS.primary : PDF_COLORS.border),
             fillColor: () => PDF_COLORS.bgCard
           },
           margin: [0, 0, 0, 10]
@@ -113,10 +111,11 @@ export function getRemarksSection(remarksText?: string) {
     stack: [
       {
         text: 'LABORATORY OBSERVATIONS & REMARKS',
-        fontSize: 12,
+        fontSize: 11,
         bold: true,
         color: PDF_COLORS.primary,
-        margin: [0, 0, 0, 15]
+        characterSpacing: 0.8,
+        margin: [0, 0, 0, 12]
       },
       ...sectionBlocks,
       // Consultant Signature
@@ -124,19 +123,36 @@ export function getRemarksSection(remarksText?: string) {
         columns: [
           { width: '*', text: '' },
           {
-            width: 180,
-            stack: [
-              { text: 'CONSULTING OFFICER', fontSize: 8, bold: true, color: PDF_COLORS.textMuted, alignment: 'center' },
-              { text: 'Muhammed Anas M', fontSize: 9, bold: true, alignment: 'center', margin: [0, 20, 0, 2], color: PDF_COLORS.textDark },
-              { text: 'Chief of Solutions - Water Quality', fontSize: 7.5, color: PDF_COLORS.textMuted, alignment: 'center' },
-              { text: '● VERIFIED COMPLIANCE', fontSize: 6.5, bold: true, color: PDF_COLORS.pass, alignment: 'center', margin: [0, 3, 0, 0] }
-            ],
-            margin: [0, 30, 0, 0]
+            width: 200,
+            table: {
+              widths: ['*'],
+              body: [
+                [
+                  {
+                    stack: [
+                      { text: 'CONSULTING OFFICER', fontSize: 7.5, bold: true, color: PDF_COLORS.textMuted, alignment: 'center', characterSpacing: 0.5 },
+                      { text: 'Muhammed Anas M', fontSize: 9, bold: true, alignment: 'center', margin: [0, 16, 0, 2], color: PDF_COLORS.secondary },
+                      { text: 'Chief of Solutions - Water Quality', fontSize: 7, color: PDF_COLORS.textMuted, alignment: 'center' },
+                      { text: '● VERIFIED COMPLIANCE', fontSize: 6, bold: true, color: PDF_COLORS.pass, alignment: 'center', margin: [0, 4, 0, 0] }
+                    ],
+                    fillColor: PDF_COLORS.bgCard,
+                    margin: [8, 8, 8, 8]
+                  }
+                ]
+              ]
+            },
+            layout: {
+              hLineWidth: () => 0.5,
+              vLineWidth: () => 0.5,
+              hLineColor: () => PDF_COLORS.border,
+              vLineColor: () => PDF_COLORS.border
+            },
+            margin: [0, 16, 0, 0]
           }
         ],
         keepWithNext: true
       }
     ],
-    margin: [0, 10, 0, 10]
+    margin: [0, 6, 0, 6]
   };
 }
